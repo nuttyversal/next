@@ -3,15 +3,22 @@
 set shell := ["fish", "-c"]
 
 develop:
-	nix develop --command fish
+	@echo "[INFO] Entering nixfmtty shell…"
+	@nix develop --command fish
 
 build:
-	nix build
-	nixfmtty flake.lock
+	@echo "[INFO] Building nixfmtty…"
+	@nix build
+	@nixfmtty flake.lock
 
-test:
-	nix develop --unset PATH --command ./scripts/test.fish
+test: build
+	@echo "[INFO] Testing nixfmtty…"
+	@nix develop --unset PATH --command ./scripts/test.fish
+
+deploy: test
+	@echo "[INFO] Deploying nixfmtty…"
 
 update:
-	nix flake update
-	nixfmtty flake.lock
+	@echo "[INFO] Updating nixfmtty…"
+	@nix flake update
+	@nixfmtty flake.lock
