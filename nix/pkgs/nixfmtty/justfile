@@ -1,0 +1,13 @@
+#!/usr/bin/env -S just --justfile
+
+develop:
+	nix develop --command fish
+
+build:
+	nix build
+
+test:
+	nix develop --unset PATH --command ./scripts/test.fish
+
+update:
+	nix flake update
