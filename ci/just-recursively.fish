@@ -14,4 +14,9 @@ for justfile in $justfiles
 		--justfile=$justfile \
 		--working-directory=(dirname $justfile) \
 		$justargs
+
+	# Fail fast if a command fails.
+	if test $status -ne 0
+		exit $status
+	end
 end
