@@ -11,6 +11,7 @@ set shell := ["fish", "-c"]
 	echo "[INFO] Building the Nuttyverse…"
 	nix build
 	nixfmtty flake.lock
+	./ci/just-recursively.fish build
 
 @test:
 	echo "[INFO] Testing the Nuttyverse…"
