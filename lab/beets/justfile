@@ -1,0 +1,32 @@
+#!/usr/bin/env -S just --justfile
+
+set export
+set shell := ["fish", "-c"]
+
+project := `basename (pwd)`
+
+@develop:
+	echo "[INFO] Entering $project shell…"
+	nix develop -c ./scripts/develop.fish
+
+@install:
+	echo "[INFO] Installing $project…"
+	nix develop -c ./scripts/install.fish
+
+@build: install
+	echo "[INFO] Building $project…"
+
+@test: build
+	echo "[INFO] Testing $project…"
+
+@deploy: test
+	echo "[INFO] Deploying $project…"
+
+@clean:
+	echo "[INFO] Cleaning $project…"
+	rm -frv .venv/
+
+@update:
+	echo "[INFO] Updating $project…"
+	nix flake update
+	nix develop -c nixfmtty flake.lock
