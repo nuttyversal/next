@@ -7,25 +7,25 @@ project := `basename (pwd)`
 
 @develop:
 	echo "[INFO] Entering $project shell…"
-	nix develop --command fish
+	nix develop -c fish
 
 @build:
 	echo "[INFO] Building $project…"
 	nix build
-	nixfmtty flake.lock
+	nix develop -c nixfmtty flake.lock
 
 @test: build
 	echo "[INFO] Testing $project…"
-	nix develop --unset PATH --command ./scripts/test.fish
+	nix develop -u PATH -c ./scripts/test.fish
 
 @deploy: test
 	echo "[INFO] Deploying $project…"
 
 @clean:
 	echo "[INFO] Cleaning $project…"
-	rm --force result
+	rm -fv result
 
 @update:
 	echo "[INFO] Updating $project…"
 	nix flake update
-	nixfmtty flake.lock
+	nix develop -c nixfmtty flake.lock

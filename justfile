@@ -5,12 +5,12 @@ set shell := ["fish", "-c"]
 
 @develop:
 	echo "[INFO] Entering the Nuttyverse shell…"
-	nix develop --command fish
+	nix develop -c fish
 
 @build:
 	echo "[INFO] Building the Nuttyverse…"
 	nix build
-	nixfmtty flake.lock
+	nix develop -c nixfmtty flake.lock
 	./ci/just-recursively.fish build
 
 @test:
@@ -23,11 +23,11 @@ set shell := ["fish", "-c"]
 
 @clean:
 	echo "[INFO] Cleaning the Nuttyverse…"
-	rm --force result
+	rm -fv result
 	./ci/just-recursively.fish clean
 
 @update:
 	echo "[INFO] Updating the Nuttyverse…"
 	nix flake update
-	nixfmtty flake.lock
+	nix develop -c nixfmtty flake.lock
 	./ci/just-recursively.fish update
