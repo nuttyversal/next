@@ -1,24 +1,27 @@
 #!/usr/bin/env -S just --justfile
 
+set export
 set shell := ["fish", "-c"]
 
-develop:
-	@echo "[INFO] Entering nixfmtty shell…"
-	@nix develop --command fish
+project := `basename (pwd)`
 
-build:
-	@echo "[INFO] Building nixfmtty…"
-	@nix build
-	@nixfmtty flake.lock
+@develop:
+	echo "[INFO] Entering $project shell…"
+	nix develop --command fish
 
-test: build
-	@echo "[INFO] Testing nixfmtty…"
-	@nix develop --unset PATH --command ./scripts/test.fish
+@build:
+	echo "[INFO] Building $project…"
+	nix build
+	nixfmtty flake.lock
 
-deploy: test
-	@echo "[INFO] Deploying nixfmtty…"
+@test: build
+	echo "[INFO] Testing $project…"
+	nix develop --unset PATH --command ./scripts/test.fish
 
-update:
-	@echo "[INFO] Updating nixfmtty…"
-	@nix flake update
-	@nixfmtty flake.lock
+@deploy: test
+	echo "[INFO] Deploying $project…"
+
+@update:
+	echo "[INFO] Updating $project…"
+	nix flake update
+	nixfmtty flake.lock
