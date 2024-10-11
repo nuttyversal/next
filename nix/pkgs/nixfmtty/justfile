@@ -21,6 +21,10 @@ project := `basename (pwd)`
 @deploy: test
 	echo "[INFO] Deploying $project…"
 
+@clean:
+	echo "[INFO] Cleaning $project…"
+	rm --force result
+
 @update:
 	echo "[INFO] Updating $project…"
 	nix flake update

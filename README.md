@@ -29,6 +29,9 @@ just test
 # Deploy the Nuttyverse.
 just deploy
 
+# Clean the Nuttyverse.
+just clean
+
 # Update the Nuttyverse.
 just update
 ```

@@ -21,6 +21,11 @@ set shell := ["fish", "-c"]
 	echo "[INFO] Deploying the Nuttyverse…"
 	./ci/just-recursively.fish deploy
 
+@clean:
+	echo "[INFO] Cleaning the Nuttyverse…"
+	rm --force result
+	./ci/just-recursively.fish clean
+
 @update:
 	echo "[INFO] Updating the Nuttyverse…"
 	nix flake update
