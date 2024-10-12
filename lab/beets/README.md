@@ -8,7 +8,7 @@
 # Enter virtual environment.
 just develop
 
-# Install dependencies.
+# Install dependencies & make symlinks.
 just install
 
 # Confirm that beets is installed.

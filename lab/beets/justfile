@@ -11,6 +11,7 @@ project := `basename (pwd)`
 
 @install:
 	echo "[INFO] Installing $project…"
+	ln -is (pwd)/config.yaml ~/.config/beets/config.yaml
 	nix develop -c ./scripts/install.fish
 
 @build: install
