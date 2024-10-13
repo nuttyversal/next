@@ -10,6 +10,11 @@
 			url = "github:numtide/flake-utils";
 		};
 
+		beets = {
+			url = "./lab/beets";
+			inputs.nixpkgs.follows = "nixpkgs";
+		};
+
 		nixfmtty = {
 			url = "./nix/pkgs/nixfmtty";
 			inputs.nixpkgs.follows = "nixpkgs";
@@ -17,11 +22,11 @@
 	};
 
 	outputs =
-		{
+		inputs@{
 			self,
 			nixpkgs,
 			flake-utils,
-			nixfmtty,
+			...
 		}:
 		flake-utils.lib.eachDefaultSystem (
 			system:
@@ -30,13 +35,16 @@
 			in
 			{
 				packages = {
-					inherit (nixfmtty.packages.${system}) default;
+					inherit (inputs.nixfmtty.packages.${system}) default;
 				};
 
-				devShells.default = pkgs.mkShell {
-					buildInputs = [
-						nixfmtty.packages.${system}.default
-					];
+				devShells = {
+					default = pkgs.mkShell {
+						inputsFrom = [
+							inputs.beets.devShells.${system}.default
+							inputs.nixfmtty.devShells.${system}.default
+						];
+					};
 				};
 			}
 		);

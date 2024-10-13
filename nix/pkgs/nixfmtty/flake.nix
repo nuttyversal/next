@@ -59,13 +59,17 @@
 				};
 			in
 			{
-				packages.default = nixfmtty;
+				packages = {
+					default = nixfmtty;
+				};
 
-				devShell = pkgs.mkShell {
-					buildInputs = buildInputs ++ [
-						pkgs.just
-						nixfmtty
-					];
+				devShells = {
+					default = pkgs.mkShell {
+						buildInputs = buildInputs ++ [
+							pkgs.just
+							nixfmtty
+						];
+					};
 				};
 			}
 		);

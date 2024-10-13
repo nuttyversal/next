@@ -15,19 +15,29 @@
 		};
 	};
 
-	outputs = { self, flake-utils, nixpkgs, nixfmtty }:
-		flake-utils.lib.eachDefaultSystem (system:
+	outputs =
+		{
+			self,
+			flake-utils,
+			nixpkgs,
+			nixfmtty,
+		}:
+		flake-utils.lib.eachDefaultSystem (
+			system:
 			let
 				pkgs = import nixpkgs {
 					inherit system;
 				};
-			in {
-				devShells.default = pkgs.mkShell {
-					buildInputs = with pkgs; [
-						nixfmtty.packages.${system}.default
-						python3
-						python3Packages.pip
-					];
+			in
+			{
+				devShells = {
+					default = pkgs.mkShell {
+						buildInputs = with pkgs; [
+							nixfmtty.packages.${system}.default
+							python3
+							python3Packages.pip
+						];
+					};
 				};
 			}
 		);
