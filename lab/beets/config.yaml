@@ -1,5 +1,7 @@
 directory: ~/Nuttyverse/Music/
 library: ~/Nuttyverse/Data/beets/library.db
 plugins: badfiles chroma duplicates fetchart mbsync scrub
+paths:
+  singleton: $albumartist/Singles/$title
 import:
   move: yes
