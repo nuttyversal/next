@@ -27,7 +27,8 @@ project := `basename (pwd)`
 	echo "[INFO] Cleaning $project…"
 	rm -frv .venv/
 
-@update:
+@update: clean
 	echo "[INFO] Updating $project…"
 	nix flake update
 	nix develop -c nixfmtty flake.lock
+	nix develop -c ./scripts/update.fish
