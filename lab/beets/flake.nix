@@ -33,10 +33,10 @@
 				devShells = {
 					default = pkgs.mkShell {
 						buildInputs = with pkgs; [
-							pkgs.fish
-							pkgs.flac
-							pkgs.mp3val
 							nixfmtty.packages.${system}.default
+							fish
+							flac
+							mp3val
 							python3
 							python3Packages.pip
 						];
