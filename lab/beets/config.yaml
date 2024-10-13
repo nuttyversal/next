@@ -1,5 +1,5 @@
 directory: ~/Nuttyverse/Music/
-plugins: badfiles chroma duplicates fetchart scrub
 library: ~/Nuttyverse/Data/beets/library.db
+plugins: badfiles chroma duplicates fetchart mbsync scrub
 import:
   move: yes
