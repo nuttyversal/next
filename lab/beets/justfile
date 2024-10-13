@@ -19,6 +19,7 @@ project := `basename (pwd)`
 
 @test: build
 	echo "[INFO] Testing $project…"
+	nix develop -c ./scripts/test.fish
 
 @deploy: test
 	echo "[INFO] Deploying $project…"
