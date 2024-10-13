@@ -20,6 +20,7 @@ beet --version
 * [BadFiles](https://beets.readthedocs.io/en/stable/plugins/badfiles.html) for finding missing and corrupt files.
 * [Chroma](https://beets.readthedocs.io/en/stable/plugins/chroma.html) for identifying songs with acoustic fingerprinting.
 * [Duplicates](https://beets.readthedocs.io/en/stable/plugins/duplicates.html) for finding duplicate tracks.
+* [Edit](https://beets.readthedocs.io/en/stable/plugins/edit.html) for modifying metadata.
 * [FetchArt](https://beets.readthedocs.io/en/stable/plugins/fetchart.html) for retrieving album art.
 * [MBSync](https://beets.readthedocs.io/en/stable/plugins/mbsync.html) for fetching metadata from MusicBrainz.
 * [Scrub](https://beets.readthedocs.io/en/stable/plugins/scrub.html) for cleaning up metadata.
