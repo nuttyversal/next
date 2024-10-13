@@ -1,0 +1,13 @@
+services:
+  gonic:
+    image: sentriz/gonic:latest
+    environment:
+      - TZ=America/Phoenix
+    ports:
+      - 4747:80
+    volumes:
+      - ~/Nuttyverse/Music:/music:ro
+      - ~/Nuttyverse/Data/gonic/data:/data
+      - ~/Nuttyverse/Data/gonic/playlists:/playlists
+      - ~/Nuttyverse/Data/gonic/podcasts:/podcasts
+      - ~/Nuttyverse/Data/gonic/cache:/cache
