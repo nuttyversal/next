@@ -34,6 +34,8 @@
 					default = pkgs.mkShell {
 						buildInputs = with pkgs; [
 							pkgs.fish
+							pkgs.flac
+							pkgs.mp3val
 							nixfmtty.packages.${system}.default
 							python3
 							python3Packages.pip

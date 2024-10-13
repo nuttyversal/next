@@ -1,5 +1,5 @@
 directory: ~/Nuttyverse/Music/
 library: ~/Nuttyverse/Music/library.db
-plugins: duplicates fetchart scrub
+plugins: badfiles duplicates fetchart scrub
 import:
   move: yes
