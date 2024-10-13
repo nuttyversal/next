@@ -18,6 +18,7 @@ beet --version
 ## Plugins
 
 * [BadFiles](https://beets.readthedocs.io/en/stable/plugins/badfiles.html) for finding missing and corrupt files.
+* [Chroma](https://beets.readthedocs.io/en/stable/plugins/chroma.html) for identifying songs with acoustic fingerprinting.
 * [Duplicates](https://beets.readthedocs.io/en/stable/plugins/duplicates.html) for finding duplicate tracks.
 * [FetchArt](https://beets.readthedocs.io/en/stable/plugins/fetchart.html) for retrieving album art.
 * [Scrub](https://beets.readthedocs.io/en/stable/plugins/scrub.html) for cleaning up metadata.

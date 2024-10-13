@@ -34,6 +34,7 @@
 					default = pkgs.mkShell {
 						buildInputs = with pkgs; [
 							nixfmtty.packages.${system}.default
+							chromaprint
 							fish
 							flac
 							mp3val
