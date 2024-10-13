@@ -5,3 +5,4 @@ source .venv/bin/activate.fish
 beet bad
 beet duplicates
 beet fetchart
+beet missing

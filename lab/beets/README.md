@@ -23,4 +23,5 @@ beet --version
 * [Edit](https://beets.readthedocs.io/en/stable/plugins/edit.html) for modifying metadata.
 * [FetchArt](https://beets.readthedocs.io/en/stable/plugins/fetchart.html) for retrieving album art.
 * [MBSync](https://beets.readthedocs.io/en/stable/plugins/mbsync.html) for fetching metadata from MusicBrainz.
+* [Missing](https://beets.readthedocs.io/en/stable/plugins/missing.html) for identifying missing tracks in albums.
 * [Scrub](https://beets.readthedocs.io/en/stable/plugins/scrub.html) for cleaning up metadata.
