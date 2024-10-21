@@ -123,3 +123,6 @@ vim.api.nvim_set_keymap("n", "<Leader>ww", ":w<CR>", { noremap = true, silent = 
 
 -- Did you forget to open the file as a superuser? No problem!
 vim.api.nvim_set_keymap("c", "w!!", "w !sudo tee % >/dev/null", { noremap = true })
+
+-- Load plugin configuration modules.
+require("config.lazy")
