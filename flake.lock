@@ -11,11 +11,11 @@
 			"locked": {
 				"lastModified": 1,
 				"narHash": "sha256-BrA/AAAj5zSRJvlpbX4HNmi0ND4usBa4KF8KzIEPMFY=",
-				"path": "/nix/store/2p2195yhw96akw9s57yrs0cgabnlyii2-source/lab/beets",
+				"path": "/nix/store/2i250mc285i9p2i9cnrdlh8a5m52ablb-source/lab/beets",
 				"type": "path"
 			},
 			"original": {
-				"path": "/nix/store/2p2195yhw96akw9s57yrs0cgabnlyii2-source/lab/beets",
+				"path": "/nix/store/2i250mc285i9p2i9cnrdlh8a5m52ablb-source/lab/beets",
 				"type": "path"
 			}
 		},
@@ -137,12 +137,12 @@
 			},
 			"locked": {
 				"lastModified": 1,
-				"narHash": "sha256-u4LZqo4CrBY+c0i1OvxsGdSzAOHgOM14yOl5Wf6YAeA=",
-				"path": "/nix/store/2p2195yhw96akw9s57yrs0cgabnlyii2-source/dev/neovim",
+				"narHash": "sha256-mphlHPy8gCH5VTn8xfM+eFrTAjKL44QT6OwQjifhKOY=",
+				"path": "/nix/store/2i250mc285i9p2i9cnrdlh8a5m52ablb-source/dev/neovim",
 				"type": "path"
 			},
 			"original": {
-				"path": "/nix/store/2p2195yhw96akw9s57yrs0cgabnlyii2-source/dev/neovim",
+				"path": "/nix/store/2i250mc285i9p2i9cnrdlh8a5m52ablb-source/dev/neovim",
 				"type": "path"
 			}
 		},
@@ -153,11 +153,11 @@
 			},
 			"locked": {
 				"dir": "nix/pkgs/nixfmtty",
-				"lastModified": 1728790953,
-				"narHash": "sha256-SpS2GHk6ewl/ype5mjt1NNBbVQN2PvEqA3VcY/nIMwk=",
+				"lastModified": 1728847780,
+				"narHash": "sha256-Rmz9n7AAlmTbZ0nKx8tbV7VRhi9/KtUExBnlup/Lw9g=",
 				"owner": "nuttyversal",
 				"repo": "next",
-				"rev": "e1a726be4e3f6cf55650514a461e1c5dba79aced",
+				"rev": "da03dd3ad014c138a4d240ffb7dde804b47e01d0",
 				"type": "github"
 			},
 			"original": {
@@ -197,12 +197,12 @@
 			},
 			"locked": {
 				"lastModified": 1,
-				"narHash": "sha256-iWq/rS2uIkyAlRHeUZfMlP53OzDqjBP+JZGkaYjXcQs=",
-				"path": "/nix/store/2p2195yhw96akw9s57yrs0cgabnlyii2-source/nix/pkgs/nixfmtty",
+				"narHash": "sha256-F6CnInxz3FhAhJniiotgE8TnnkVclBq6HpeAPvxQcpo=",
+				"path": "/nix/store/2i250mc285i9p2i9cnrdlh8a5m52ablb-source/nix/pkgs/nixfmtty",
 				"type": "path"
 			},
 			"original": {
-				"path": "/nix/store/2p2195yhw96akw9s57yrs0cgabnlyii2-source/nix/pkgs/nixfmtty",
+				"path": "/nix/store/2i250mc285i9p2i9cnrdlh8a5m52ablb-source/nix/pkgs/nixfmtty",
 				"type": "path"
 			}
 		},
