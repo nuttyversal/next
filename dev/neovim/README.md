@@ -1,52 +1,47 @@
 # Nutty's Neovim
 
-## Features
+## Options
 
 * Buffer management
-	* Hidden buffers enabled
-	* Confirmation for unsaved changes
-	* Automatic writing of changes to disk
 	* Automatic reloading of externally changed files
+	* Automatic writing of changes to disk
+	* Confirmation for unsaved changes
+	* Hidden buffers enabled
 
 * Persistent undo tree history
 	* Stored in `~/.cache/nvim/undodir`
 
 * Whitespace management
 	* Automatically remove trailing whitespace
-	* 3-space indentation (configurable)
 	* Visible whitespace characters
+	* 3-width tab indentation
 
-* Search improvements
-	* Regular expressions enabled
-	* Incremental search
-	* Search result highlighting
+* Searching
 	* Case-insensitive search with smart case
+	* Regular expressions enabled
+	* Search result highlighting
+	* Incremental search
 
-* Performance optimizations
-	* Reduced timeout for key sequences
-	* Faster update time
-
-* User interface enhancements
+* User interface
+	* Hide end-of-buffer symbol (`~`)
+	* Cursor line highlighting
 	* Line numbers
 	* Fold column
-	* Cursor line highlighting
 	* True color support
-	* Custom fill characters for empty lines
 
 * Navigation and editing
-	* Improved scrolling behavior
+	* Scroll padding
 	* Cross-line cursor movement
-	* System clipboard integration
-	* Colemak-friendly window navigation
+	* Colemak-friendly window navigation (keymap)
 
 * Customization
-	* Space as leader key
-	* Toggle switches for wrapping, whitespace visibility, and paste mode
+	* `<Space>` leader key
 
-* Convenience features
-	* Clear search highlighting shortcut
-	* Quick write to disk
-	* `sudo` write support
+* Convenience
+	* System clipboard integration
+	* Clear search highlighting (keymap)
+	* Quick write to disk (keymap)
+	* `sudo` write support (keymap)
 
 ## Plugins
 
