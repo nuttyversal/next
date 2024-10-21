@@ -1,7 +1,7 @@
 #!/usr/bin/env -S just --justfile
 
 set export
-set shell := ["fish", "-c"]
+set shell := ["nix", "develop", "-u", "PATH", "-c", "fish", "-c"]
 
 project := `basename (pwd)`
 
@@ -12,11 +12,11 @@ project := `basename (pwd)`
 @build:
 	echo "[INFO] Building $project…"
 	nix build
-	nix develop -c nixfmtty flake.lock
+	nixfmtty flake.lock
 
 @test: build
 	echo "[INFO] Testing $project…"
-	nix develop -u PATH -c ./scripts/test.fish
+	./scripts/test.fish
 
 @deploy: test
 	echo "[INFO] Deploying $project…"
@@ -28,4 +28,4 @@ project := `basename (pwd)`
 @update:
 	echo "[INFO] Updating $project…"
 	nix flake update
-	nix develop -c nixfmtty flake.lock
+	nixfmtty flake.lock

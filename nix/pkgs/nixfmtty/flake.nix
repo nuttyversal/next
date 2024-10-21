@@ -23,8 +23,10 @@
 				pkgs = nixpkgs.legacyPackages.${system};
 
 				buildInputs = [
+					pkgs.coreutils
 					pkgs.fish
 					pkgs.moreutils
+					pkgs.nix
 					pkgs.nixfmt-rfc-style
 				];
 
@@ -66,7 +68,6 @@
 				devShells = {
 					default = pkgs.mkShell {
 						buildInputs = buildInputs ++ [
-							pkgs.just
 							nixfmtty
 						];
 					};

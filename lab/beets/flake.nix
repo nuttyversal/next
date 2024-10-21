@@ -35,6 +35,7 @@
 						buildInputs = with pkgs; [
 							nixfmtty.packages.${system}.default
 							chromaprint
+							coreutils
 							fish
 							flac
 							mp3val

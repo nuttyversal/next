@@ -34,6 +34,7 @@
 					buildInputs = with pkgs; [
 						nixfmtty.packages.${system}.default
 						pkgs.coreutils
+						pkgs.fish
 						pkgs.git
 						pkgs.neovim
 					];

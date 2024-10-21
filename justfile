@@ -1,7 +1,7 @@
 #!/usr/bin/env -S just --justfile
 
 set export
-set shell := ["fish", "-c"]
+set shell := ["nix", "develop", "-c", "fish", "-c"]
 
 @develop:
 	echo "[INFO] Entering the Nuttyverse shell…"
@@ -10,7 +10,7 @@ set shell := ["fish", "-c"]
 @build:
 	echo "[INFO] Building the Nuttyverse…"
 	nix build
-	nix develop -c nixfmtty flake.lock
+	nixfmtty flake.lock
 	./ci/just-recursively.fish build
 
 @test:
@@ -29,5 +29,5 @@ set shell := ["fish", "-c"]
 @update:
 	echo "[INFO] Updating the Nuttyverse…"
 	nix flake update
-	nix develop -c nixfmtty flake.lock
+	nixfmtty flake.lock
 	./ci/just-recursively.fish update

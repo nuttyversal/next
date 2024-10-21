@@ -1,25 +1,25 @@
 #!/usr/bin/env -S just --justfile
 
 set export
-set shell := ["fish", "-c"]
+set shell := ["nix", "develop", "-u", "PATH", "-c", "fish", "-c"]
 
 project := `basename (pwd)`
 
 @develop:
 	echo "[INFO] Entering $project shell…"
-	nix develop -c ./scripts/develop.fish
+	./scripts/develop.fish
 
 @install:
 	echo "[INFO] Installing $project…"
 	ln -is (pwd)/config.yaml ~/.config/beets/config.yaml
-	nix develop -c ./scripts/install.fish
+	./scripts/install.fish
 
 @build: install
 	echo "[INFO] Building $project…"
 
 @test: build
 	echo "[INFO] Testing $project…"
-	nix develop -u PATH -c ./scripts/test.fish
+	./scripts/test.fish
 
 @deploy: test
 	echo "[INFO] Deploying $project…"
@@ -31,5 +31,5 @@ project := `basename (pwd)`
 @update: clean
 	echo "[INFO] Updating $project…"
 	nix flake update
-	nix develop -c nixfmtty flake.lock
-	nix develop -c ./scripts/update.fish
+	nixfmtty flake.lock
+	./scripts/update.fish
