@@ -67,7 +67,6 @@ vim.opt.smartcase = true
 vim.opt.timeout = false
 vim.opt.ttimeout = true
 vim.opt.ttimeoutlen = 10
-vim.opt.updatetime = 100
 
 -- Add padding around the edges of the window to improve readability
 -- when scrolling and moving the cursor near the edge of the window.
