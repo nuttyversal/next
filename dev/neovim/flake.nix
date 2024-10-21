@@ -29,14 +29,13 @@
 					inherit system;
 				};
 			in
-			rec {
-				packages = {
-					neovim = pkgs.neovim;
-				};
-
+			{
 				devShells.default = pkgs.mkShell {
-					buildInputs = pkgs.lib.attrsets.attrValues packages ++ [
+					buildInputs = with pkgs; [
 						nixfmtty.packages.${system}.default
+						pkgs.coreutils
+						pkgs.git
+						pkgs.neovim
 					];
 				};
 			}

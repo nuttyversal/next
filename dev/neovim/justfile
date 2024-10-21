@@ -1,7 +1,7 @@
 #!/usr/bin/env -S just --justfile
 
 set export
-set shell := ["fish", "-c"]
+set shell := ["nix", "develop", "-c", "fish", "-c"]
 
 project := `basename (pwd)`
 
@@ -11,7 +11,7 @@ project := `basename (pwd)`
 
 @install:
 	echo "[INFO] Installing $project…"
-	ln -is (pwd) ~/.config/nvim
+	ln -isvT (pwd) ~/.config/nvim
 
 @build: install
 	echo "[INFO] Building $project…"
@@ -28,4 +28,4 @@ project := `basename (pwd)`
 @update:
 	echo "[INFO] Updating $project…"
 	nix flake update
-	nix develop -c nixfmtty flake.lock
+	nixfmtty flake.lock
