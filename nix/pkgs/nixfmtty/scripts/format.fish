@@ -76,7 +76,7 @@ else
 end
 
 if test (count $argv) -eq 0
-	echo "Usage: nixfmtty [OPTIONS] FILES..."
+	echo "Usage: nixfmtty [OPTIONS] FILES…"
 	echo "Options:"
 	echo "   -c, --check | Check if the files are formatted correctly."
 	exit 1
