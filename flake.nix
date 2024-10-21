@@ -10,6 +10,11 @@
 			url = "github:numtide/flake-utils";
 		};
 
+		neovim = {
+			url = "./dev/neovim";
+			inputs.nixpkgs.follows = "nixpkgs";
+		};
+
 		beets = {
 			url = "./lab/beets";
 			inputs.nixpkgs.follows = "nixpkgs";
@@ -41,6 +46,7 @@
 				devShells = {
 					default = pkgs.mkShell {
 						inputsFrom = [
+							inputs.neovim.devShells.${system}.default
 							inputs.beets.devShells.${system}.default
 							inputs.nixfmtty.devShells.${system}.default
 						];
