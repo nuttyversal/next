@@ -11,6 +11,7 @@ point. Emerging from this singularity will bloom a new digital universe! 😀
 ```
 nuttyverse
 ├── ci - Continuous integration & deployment
+├── dev - Development tools & utilities
 ├── lab - Experimental & unpolished projects
 └── nix - Custom Nix flakes & packages
 ```
