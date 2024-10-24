@@ -1,7 +1,7 @@
 #!/usr/bin/env -S just --justfile
 
 set export
-set shell := ["nix", "develop", "-c", "fish", "-c"]
+set shell := ["nix", "develop", "-u", "PATH", "-c", "fish", "-c"]
 
 @develop:
 	echo "[INFO] Entering the Nuttyverse shell…"

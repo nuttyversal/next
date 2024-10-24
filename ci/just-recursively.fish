@@ -13,6 +13,13 @@ for justfile in $justfiles
 	just \
 		--justfile=$justfile \
 		--working-directory=(dirname $justfile) \
+		--shell "nix" \
+		--shell-arg "develop" \
+		--shell-arg "-u" \
+		--shell-arg "PATH" \
+		--shell-arg "-c" \
+		--shell-arg "fish" \
+		--shell-arg "-c" \
 		$justargs
 
 	# Fail fast if a command fails.

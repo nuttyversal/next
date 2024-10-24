@@ -46,12 +46,14 @@
 				devShells = {
 					default = pkgs.mkShell {
 						inputsFrom = [
-							pkgs.just
-							pkgs.nix
-						] ++ [
 							inputs.neovim.devShells.${system}.default
 							inputs.beets.devShells.${system}.default
 							inputs.nixfmtty.devShells.${system}.default
+						];
+
+						buildInputs = [
+							pkgs.just
+							pkgs.nix
 						];
 					};
 				};
