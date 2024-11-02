@@ -1,4 +1,4 @@
-#!/usr/bin/env fish
+#!/usr/bin/env fish --no-config
 
 function log
 	set result $argv[1]

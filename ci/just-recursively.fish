@@ -1,4 +1,4 @@
-#!/usr/bin/env fish
+#!/usr/bin/env fish --no-config
 
 set justfiles (ls **/justfile)
 set justargs $argv

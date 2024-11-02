@@ -1,4 +1,4 @@
-#!/usr/bin/env fish
+#!/usr/bin/env fish --no-config
 
 function check
 	set file $argv[1]
