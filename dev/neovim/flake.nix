@@ -36,7 +36,9 @@
 						pkgs.coreutils
 						pkgs.fish
 						pkgs.git
+						pkgs.just
 						pkgs.neovim
+						pkgs.nix
 					];
 				};
 			}

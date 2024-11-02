@@ -52,6 +52,7 @@
 						];
 
 						buildInputs = [
+							pkgs.git
 							pkgs.just
 							pkgs.nix
 						];

@@ -1,17 +1,30 @@
 #!/usr/bin/env -S just --justfile
 
 set export
-set shell := ["fish", "-c"]
+set shell := ["fish", "--no-config", "--command"]
 
 project := `basename (pwd)`
 
+@ci *COMMAND:
+	echo "[INFO] Entering the Nuttyverse CI…"
+	echo "{{COMMAND}}"
+	nix develop \
+		--no-update-lock-file \
+		--ignore-environment \
+		--command {{COMMAND}}
+
 @develop:
 	echo "[INFO] Entering $project shell…"
-	nix develop -c fish
+	nix develop --command fish
 
 @install:
 	echo "[INFO] Installing $project…"
-	ln -isvT (pwd) ~/.config/nvim
+	ln \
+		--interactive \
+		--no-target-directory \
+		--symbolic \
+		--verbose \
+		(pwd) ~/.config/nvim
 
 @build: install
 	echo "[INFO] Building $project…"

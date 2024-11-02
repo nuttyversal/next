@@ -69,6 +69,8 @@
 					default = pkgs.mkShell {
 						buildInputs = buildInputs ++ [
 							nixfmtty
+							pkgs.git
+							pkgs.just
 						];
 					};
 				};

@@ -32,15 +32,17 @@
 			{
 				devShells = {
 					default = pkgs.mkShell {
-						buildInputs = with pkgs; [
+						buildInputs = [
 							nixfmtty.packages.${system}.default
-							chromaprint
-							coreutils
-							fish
-							flac
-							mp3val
-							python3
-							python3Packages.pip
+							pkgs.chromaprint
+							pkgs.coreutils
+							pkgs.fish
+							pkgs.flac
+							pkgs.just
+							pkgs.mp3val
+							pkgs.nix
+							pkgs.python3
+							pkgs.python3Packages.pip
 						];
 					};
 				};
