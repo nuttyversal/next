@@ -16,9 +16,11 @@ set shell := ["fish", "--no-config", "--command"]
 
 @build:
 	echo "[INFO] Building the Nuttyverse…"
+	fish --no-config ./ci/just-recursively.fish build
+
+@build-root:
 	nix build
 	nixfmtty flake.lock
-	fish --no-config ./ci/just-recursively.fish build
 
 @test:
 	echo "[INFO] Testing the Nuttyverse…"
