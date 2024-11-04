@@ -7,7 +7,6 @@ project := `basename (pwd)`
 
 @ci *COMMAND:
 	echo "[INFO] Entering the Nuttyverse CI…"
-	echo "{{COMMAND}}"
 	nix develop \
 		--no-update-lock-file \
 		--ignore-environment \
