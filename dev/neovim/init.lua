@@ -125,3 +125,4 @@ vim.api.nvim_set_keymap("c", "w!!", "w !sudo tee % >/dev/null", { noremap = true
 
 -- Load plugin configuration modules.
 require("config.lazy")
+require("config.treesitter")
