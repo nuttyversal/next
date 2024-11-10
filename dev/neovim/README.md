@@ -45,4 +45,8 @@
 
 ## Plugins
 
+* [Tree-sitter](https://github.com/nvim-treesitter/nvim-treesitter)
+	* Syntax highlighting
+	* Incremental selection
+
 * To be added… (managed by [lazy.nvim](https://lazy.folke.io/))
