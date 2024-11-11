@@ -34,7 +34,9 @@
 					default = pkgs.mkShell {
 						buildInputs = [
 							nixfmtty.packages.${system}.default
+							pkgs.lua
 							pkgs.lua-language-server
+							pkgs.lua54Packages.luarocks
 							pkgs.stylua
 						];
 					};
