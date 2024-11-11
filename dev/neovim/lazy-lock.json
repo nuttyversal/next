@@ -1,3 +1,14 @@
 {
-  "nvim-treesitter": { "branch": "master", "commit": "b47dde81a0a4b9b62e9a73a71ff0df2202323dd9" }
+	"nvim-tree.lua": {
+		"branch": "master",
+		"commit": "c7639482a1598f4756798df1b2d72f79fe5bb34f"
+	},
+	"nvim-treesitter": {
+		"branch": "master",
+		"commit": "a069bb62a86caaa15ea68af9e6a3bcd8cbc3608d"
+	},
+	"nvim-web-devicons": {
+		"branch": "master",
+		"commit": "19d257cf889f79f4022163c3fbb5e08639077bd8"
+	}
 }
