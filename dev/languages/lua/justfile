@@ -1,0 +1,37 @@
+#!/usr/bin/env -S just --justfile
+
+set export
+set shell := ["fish", "--no-config", "--command"]
+
+project := `basename (pwd)`
+
+@ci *COMMAND:
+	echo "[INFO] Entering the Nuttyverse CI…"
+	nix develop \
+		--no-update-lock-file \
+		--ignore-environment \
+		--command {{COMMAND}}
+
+@develop:
+	echo "[INFO] Entering $project shell…"
+	nix develop --command fish
+
+@install:
+	echo "[INFO] Installing $project…"
+
+@build: install
+	echo "[INFO] Building $project…"
+
+@test: build
+	echo "[INFO] Testing $project…"
+
+@deploy: test
+	echo "[INFO] Deploying $project…"
+
+@clean:
+	echo "[INFO] Cleaning $project…"
+
+@update:
+	echo "[INFO] Updating $project…"
+	nix flake update
+	nixfmtty flake.lock
