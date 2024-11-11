@@ -43,6 +43,13 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 						enable = true,
 						globals = { "vim" },
 					},
+
+					workspace = {
+						library = {
+							[vim.fn.expand("$VIMRUNTIME/lua")] = true,
+							[vim.fn.expand("$VIMRUNTIME/lua/vim/lsp")] = true,
+						},
+					},
 				},
 			},
 		})
