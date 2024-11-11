@@ -9,6 +9,7 @@
 --- @param markers table<string> A list of files that mark a project root.
 --- @return string project_root The project root directory (or buffer directory).
 local function infer_project_root_directory(markers)
+	-- Start at the current buffer directory.
 	local buffer_file_dir = vim.fn.expand("%:p:h")
 	local current_dir = buffer_file_dir
 
