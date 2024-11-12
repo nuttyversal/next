@@ -1,7 +1,9 @@
+local neogit = require("neogit")
+
 -- Open neogit.
 vim.api.nvim_set_keymap("n", "<Leader>gg", ":Neogit<CR>", { noremap = true })
 
-require("neogit").setup({
+neogit.setup({
 	disable_hint = true,
 	graph_style = "unicode",
 
