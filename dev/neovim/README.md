@@ -55,4 +55,8 @@
 * [neogit](https://github.com/NeogitOrg/neogit)
 	* Magit, but for Neovim
 
+* [telescope](https://github.com/nvim-telescope/telescope.nvim)
+    * Gaze deeply into unknown regions using the power of the moon
+    * Fuzzy finding over lists
+
 * To be added… (managed by [lazy.nvim](https://lazy.folke.io/))

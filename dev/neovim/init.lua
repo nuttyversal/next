@@ -127,5 +127,6 @@ vim.api.nvim_set_keymap("c", "w!!", "w !sudo tee % >/dev/null", { noremap = true
 require("config.lazy")
 require("config.lsp")
 require("config.neogit")
+require("config.telescope")
 require("config.tree")
 require("config.tree-sitter")
