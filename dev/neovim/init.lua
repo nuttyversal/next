@@ -82,9 +82,9 @@ vim.opt.whichwrap:append("<>[]~")
 -- Use the system clipboard as the default register for copy and paste.
 vim.opt.clipboard = "unnamedplus"
 
--- Add line numbers and a fold column to the left side of the window.
+-- Add line number column and disable fold column to the left side of the window.
 vim.opt.number = true
-vim.opt.foldcolumn = "1"
+vim.opt.foldcolumn = "0"
 
 -- Improve ✨ aesthetics ✨.
 vim.opt.cursorline = true
