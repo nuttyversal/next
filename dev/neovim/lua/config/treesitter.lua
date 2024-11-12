@@ -6,6 +6,10 @@ vim.opt.foldexpr = "nvim_treesitter#foldexpr()"
 vim.opt.foldenable = false
 
 treesitter.setup({
+	modules = {},
+	ensure_installed = {},
+	ignore_install = {},
+
 	-- Prefer to install parsers asynchronously.
 	sync_install = false,
 
