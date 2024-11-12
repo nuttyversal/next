@@ -52,4 +52,7 @@
 * [nvim-tree](https://github.com/nvim-tree/nvim-tree.lua)
 	* File explorer tab
 
+* [neogit](https://github.com/NeogitOrg/neogit)
+	* Magit, but for Neovim
+
 * To be added… (managed by [lazy.nvim](https://lazy.folke.io/))
