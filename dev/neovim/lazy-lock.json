@@ -1,14 +1,30 @@
 {
+	"diffview.nvim": {
+		"branch": "main",
+		"commit": "4516612fe98ff56ae0415a259ff6361a89419b0a"
+	},
+	"neogit": {
+		"branch": "master",
+		"commit": "8e1e301c2e33c60375850bcf22ba1fb77b684b97"
+	},
 	"nvim-tree.lua": {
 		"branch": "master",
 		"commit": "c7639482a1598f4756798df1b2d72f79fe5bb34f"
 	},
 	"nvim-treesitter": {
 		"branch": "master",
-		"commit": "a069bb62a86caaa15ea68af9e6a3bcd8cbc3608d"
+		"commit": "bb06afa3f1111780932b3c5493ad65473ce85f9d"
 	},
 	"nvim-web-devicons": {
 		"branch": "master",
 		"commit": "19d257cf889f79f4022163c3fbb5e08639077bd8"
+	},
+	"plenary.nvim": {
+		"branch": "master",
+		"commit": "2d9b06177a975543726ce5c73fca176cedbffe9d"
+	},
+	"telescope.nvim": {
+		"branch": "master",
+		"commit": "a0bbec21143c7bc5f8bb02e0005fa0b982edc026"
 	}
 }
