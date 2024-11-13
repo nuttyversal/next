@@ -56,7 +56,12 @@
 	* Magit, but for Neovim
 
 * [telescope](https://github.com/nvim-telescope/telescope.nvim)
-    * Gaze deeply into unknown regions using the power of the moon
-    * Fuzzy finding over lists
+	* Gaze deeply into unknown regions using the power of the moon
+	* Fuzzy finding over lists
+
+* [blink.cmp](https://github.com/Saghen/blink.cmp)
+	* Auto-completion plugin
+	* Super fast — uses custom SIMD fuzzy searcher
+	* Experimental (beta testing)
 
 * To be added… (managed by [lazy.nvim](https://lazy.folke.io/))

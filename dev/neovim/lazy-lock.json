@@ -1,4 +1,8 @@
 {
+	"blink.cmp": {
+		"branch": "main",
+		"commit": "75cadbcd2657ed01326ca2b0e5e4d78a77127ca3"
+	},
 	"diffview.nvim": {
 		"branch": "main",
 		"commit": "4516612fe98ff56ae0415a259ff6361a89419b0a"
