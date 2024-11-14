@@ -57,7 +57,7 @@ vim.api.nvim_create_autocmd({ "LspAttach" }, {
 			end
 
 			if lsp_client.supports_method("textDocument/rename") then
-				vim.keymap.set("n", "<Space>rn", vim.lsp.buf.rename)
+				vim.keymap.set("n", "<Space>cr", vim.lsp.buf.rename)
 			end
 		end
 	end
