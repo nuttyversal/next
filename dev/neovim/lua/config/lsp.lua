@@ -1,3 +1,5 @@
+local telescope_builtin = require("telescope.builtin")
+
 --- Infer the project root directory of the current buffer.
 ---
 --- The project root directory is identified by the presence of a marker file,
@@ -32,6 +34,34 @@ local function infer_project_root_directory(markers)
 
 	return buffer_file_dir
 end
+
+vim.api.nvim_create_autocmd({ "LspAttach" }, {
+	callback = function (args)
+		local lsp_client = vim.lsp.get_client_by_id(args.data.client_id)
+
+		if lsp_client ~= nil then
+			if lsp_client.supports_method("textDocument/definition") then
+				vim.keymap.set("n", "gd", telescope_builtin.lsp_definitions)
+			end
+
+			if lsp_client.supports_method("textDocument/references") then
+				vim.keymap.set("n", "gr", telescope_builtin.lsp_references)
+			end
+
+			if lsp_client.supports_method("textDocument/implementation") then
+				vim.keymap.set("n", "gi", telescope_builtin.lsp_implementations)
+			end
+
+			if lsp_client.supports_method("textDocument/codeAction") then
+				vim.keymap.set("n", "<Space>ca", vim.lsp.buf.code_action)
+			end
+
+			if lsp_client.supports_method("textDocument/rename") then
+				vim.keymap.set("n", "<Space>rn", vim.lsp.buf.rename)
+			end
+		end
+	end
+})
 
 vim.api.nvim_create_autocmd({ "FileType" }, {
 	desc = "Start the Lua language server when editing Lua files",
