@@ -56,6 +56,17 @@ vim.api.nvim_create_autocmd({ "LspAttach" }, {
 				vim.keymap.set("n", "<Space>ca", vim.lsp.buf.code_action)
 			end
 
+			if lsp_client.supports_method("textDocument/codeLens") then
+				vim.keymap.set("n", "<Space>cc", vim.lsp.codelens.run)
+
+				-- Auto-refresh code lenses.
+				vim.api.nvim_create_autocmd({ 'TextChanged', 'InsertLeave' }, {
+					callback = function()
+						vim.lsp.codelens.refresh()
+					end,
+				})
+			end
+
 			if lsp_client.supports_method("textDocument/rename") then
 				vim.keymap.set("n", "<Space>cr", vim.lsp.buf.rename)
 			end
@@ -76,6 +87,10 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 
 			settings = {
 				Lua = {
+					codeLens = {
+						enable = true,
+					},
+
 					diagnostics = {
 						enable = true,
 						globals = { "vim" },
