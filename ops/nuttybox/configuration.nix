@@ -19,32 +19,6 @@ with lib;
 		# …
 	];
 
-	boot = {
-		loader = {
-			systemd-boot = {
-				enable = true;
-			};
-
-			efi = {
-				canTouchEfiVariables = true;
-				efiSysMountPoint = "/boot/efi";
-			};
-		};
-
-		supportedFilesystems = [ "zfs" ];
-
-		zfs = {
-			requestEncryptionCredentials = true;
-		};
-
-		initrd = {
-			postMountCommands = lib.mkAfter ''
-				# Reset system state after reboot.
-				zfs rollback -r nuttyroot/root@void
-			'';
-		};
-	};
-
 	users = {
 		users = {
 			root = {
