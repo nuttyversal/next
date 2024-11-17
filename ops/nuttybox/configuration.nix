@@ -11,6 +11,7 @@ with lib;
 	imports = [
 		# System Configuration
 		./system/networking.nix
+		./system/openssh.nix
 
 		# Service Configuration
 		# …
@@ -37,27 +38,10 @@ with lib;
 	};
 
 	nixpkgs = {
-		hostPlatform = lib.mkDefault "x86_64-linux";
+		hostPlatform = "x86_64-linux";
 
 		config = {
 			allowUnfree = true;
-		};
-	};
-
-	services = {
-		openssh = {
-			enable = true;
-			extraConfig = "ClientAliveInterval 60";
-
-			settings = {
-				PermitRootLogin = "yes";
-			};
-		};
-	};
-
-	networking = {
-		firewall = {
-			allowedTCPPorts = [ 22 ];
 		};
 	};
 
