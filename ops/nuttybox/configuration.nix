@@ -19,6 +19,51 @@ with lib;
 		# …
 	];
 
+	hardware = {
+		system76 = {
+			enableAll = true;
+		};
+	};
+
+	boot = {
+		loader = {
+			systemd-boot = {
+				enable = true;
+			};
+
+			efi = {
+				canTouchEfiVariables = true;
+				efiSysMountPoint = "/boot/efi";
+			};
+		};
+
+		supportedFilesystems = [ "zfs" ];
+
+		zfs = {
+			requestEncryptionCredentials = true;
+		};
+
+		initrd = {
+			postMountCommands = lib.mkAfter ''
+				# Reset system state after reboot.
+				zfs rollback -r nuttyroot/root@void
+			'';
+		};
+	};
+
+	networking = {
+		hostName = "nuttybox";
+		hostId = "c5bb9702";
+	};
+
+	users = {
+		users = {
+			root = {
+				hashedPassword = "$6$Be73trjnXBl/aQqG$bJr64Tvq8tAsONCPg9Qzc2knUBphcdf315EOpbM73chiwR4bzt4hlfOOnFxWDszqNXQzg0s27IGWBsDsiRQ1d1";
+			};
+		};
+	};
+
 	time = {
 		timeZone = "America/Phoenix";
 	};
@@ -31,6 +76,23 @@ with lib;
 	nixpkgs = {
 		config = {
 			allowUnfree = true;
+		};
+	};
+
+	services = {
+		openssh = {
+			enable = true;
+			extraConfig = "ClientAliveInterval 60";
+
+			settings = {
+				PermitRootLogin = "yes";
+			};
+		};
+	};
+
+	networking = {
+		firewall = {
+			allowedTCPPorts = [ 22 ];
 		};
 	};
 
