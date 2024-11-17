@@ -79,6 +79,11 @@
 			fsType = "zfs";
 		};
 
+		"/sys" = {
+			device = "nuttyroot/sys";
+			fsType = "zfs";
+		};
+
 		"/boot" = {
 			device = "nuttyboot/boot";
 			fsType = "zfs";
