@@ -15,7 +15,7 @@ with lib;
 		./system/users.nix
 
 		# Service Configuration
-		# …
+		./services/postgresql.nix
 
 		# Container Configuration
 		# …
