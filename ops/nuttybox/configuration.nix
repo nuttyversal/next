@@ -10,7 +10,7 @@ with lib;
 {
 	imports = [
 		# System Configuration
-		# …
+		./system/networking.nix
 
 		# Service Configuration
 		# …
@@ -43,11 +43,6 @@ with lib;
 				zfs rollback -r nuttyroot/root@void
 			'';
 		};
-	};
-
-	networking = {
-		hostName = "nuttybox";
-		hostId = "c5bb9702";
 	};
 
 	users = {

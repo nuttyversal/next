@@ -96,10 +96,6 @@
 
 	swapDevices = [ ];
 
-	networking = {
-		useDHCP = lib.mkDefault true;
-	};
-
 	hardware = {
 		cpu = {
 			amd = {
