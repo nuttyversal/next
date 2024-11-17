@@ -13,7 +13,8 @@ nuttyverse
 ├── ci - Continuous integration & deployment
 ├── dev - Development tools & utilities
 ├── lab - Experimental & unpolished projects
-└── nix - Custom Nix flakes & packages
+├── nix - Custom Nix flakes & packages
+└── ops - Declarative system configurations
 ```
 
 ## Dev
