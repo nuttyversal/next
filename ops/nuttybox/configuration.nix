@@ -19,12 +19,6 @@ with lib;
 		# …
 	];
 
-	hardware = {
-		system76 = {
-			enableAll = true;
-		};
-	};
-
 	boot = {
 		loader = {
 			systemd-boot = {
@@ -74,6 +68,8 @@ with lib;
 	};
 
 	nixpkgs = {
+		hostPlatform = lib.mkDefault "x86_64-linux";
+
 		config = {
 			allowUnfree = true;
 		};
