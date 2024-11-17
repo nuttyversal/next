@@ -12,6 +12,7 @@ with lib;
 		# System Configuration
 		./system/networking.nix
 		./system/openssh.nix
+		./system/users.nix
 
 		# Service Configuration
 		# …
@@ -19,14 +20,6 @@ with lib;
 		# Container Configuration
 		# …
 	];
-
-	users = {
-		users = {
-			root = {
-				hashedPassword = "$6$Be73trjnXBl/aQqG$bJr64Tvq8tAsONCPg9Qzc2knUBphcdf315EOpbM73chiwR4bzt4hlfOOnFxWDszqNXQzg0s27IGWBsDsiRQ1d1";
-			};
-		};
-	};
 
 	time = {
 		timeZone = "America/Phoenix";
