@@ -7,7 +7,7 @@
 
 			hostKeys = [
 				{
-					path = "/sys/ssh/ed25519.key";
+					path = "/host/ssh/ed25519.key";
 					type = "ed25519";
 				}
 			];
