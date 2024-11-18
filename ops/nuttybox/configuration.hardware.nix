@@ -77,6 +77,10 @@
 		"/host" = {
 			device = "nuttyroot/host";
 			fsType = "zfs";
+
+			# This directory contains the host SSH keys which are used to decrypt
+			# age-encrypted secrets. Ensure it is mounted in the initial ramdisk.
+			neededForBoot = true;
 		};
 
 		"/nix" = {
