@@ -74,13 +74,13 @@
 			fsType = "zfs";
 		};
 
-		"/nix" = {
-			device = "nuttyroot/nix";
+		"/host" = {
+			device = "nuttyroot/host";
 			fsType = "zfs";
 		};
 
-		"/sys" = {
-			device = "nuttyroot/sys";
+		"/nix" = {
+			device = "nuttyroot/nix";
 			fsType = "zfs";
 		};
 
