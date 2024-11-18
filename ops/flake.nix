@@ -5,22 +5,55 @@
 		nixpkgs = {
 			url = "github:NixOS/nixpkgs/nixos-unstable";
 		};
+
+		agenix = {
+			url = "github:ryantm/agenix";
+			inputs.nixpkgs.follows = "nixpkgs";
+		};
+
+		flake-utils = {
+			url = "github:numtide/flake-utils";
+		};
 	};
 
 	outputs =
-		inputs@{ self, nixpkgs, ... }:
+		inputs@{
+			self,
+			nixpkgs,
+			agenix,
+			flake-utils,
+			...
+		}:
 		{
-			nixosConfigurations.nuttybox = nixpkgs.lib.nixosSystem {
-				system = "x86_64-linux";
+			nixosConfigurations = {
+				nuttybox = nixpkgs.lib.nixosSystem {
+					system = "x86_64-linux";
 
-				modules = [
-					./nuttybox/configuration.nix
-					./nuttybox/configuration.hardware.nix
-				];
+					modules = [
+						./nuttybox/configuration.nix
+						./nuttybox/configuration.hardware.nix
+						agenix.nixosModules.default
+					];
 
-				specialArgs = {
-					inherit inputs;
+					specialArgs = {
+						inherit inputs;
+					};
 				};
 			};
-		};
+		}
+		// flake-utils.lib.eachDefaultSystem (
+			system:
+			let
+				pkgs = import nixpkgs {
+					inherit system;
+				};
+			in
+			{
+				devShells.default = pkgs.mkShell {
+					buildInputs = [
+						agenix.packages.${system}.default
+					];
+				};
+			}
+		);
 }

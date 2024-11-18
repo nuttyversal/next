@@ -16,6 +16,7 @@ with lib;
 
 		# Service Configuration
 		./services/postgresql.nix
+		./services/vaultwarden.nix
 
 		# Container Configuration
 		# …
