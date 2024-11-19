@@ -1,12 +1,8 @@
 {
-	inputs,
-	config,
-	lib,
 	pkgs,
 	...
 }:
 
-with lib;
 {
 	imports = [
 		# System Configuration
