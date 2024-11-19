@@ -39,6 +39,19 @@
 						inherit inputs;
 					};
 				};
+
+				nuttygate = nixpkgs.lib.nixosSystem {
+					system = "x86_64-linux";
+
+					modules = [
+						./nuttygate/configuration.nix
+						./nuttygate/configuration.hardware.nix
+					];
+
+					specialArgs = {
+						inherit inputs;
+					};
+				};
 			};
 		}
 		// flake-utils.lib.eachDefaultSystem (
