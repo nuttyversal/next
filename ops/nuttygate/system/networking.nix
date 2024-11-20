@@ -1,4 +1,7 @@
-{ ... }:
+{
+	pkgs,
+	...
+}:
 
 {
 	networking = {
@@ -167,5 +170,12 @@
 				ATTR{address}=="96:00:03:dc:32:f8", NAME="eth0"
 			'';
 		};
+	};
+
+	environment = {
+		systemPackages = [
+			# For Caddy to generate self-signed TLS certificates.
+			pkgs.nss-tools
+		];
 	};
 }
