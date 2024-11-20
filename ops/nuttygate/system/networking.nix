@@ -124,21 +124,21 @@
 						10.100.0.5 nuttytower
 						fallthrough
 					}
+
+					# Forward queries to Hetzner resolvers.
+					forward . 2a01:4ff:ff00::add:1
+					alternate NXDOMAIN,SERVFAIL,REFUSED . 2a01:4ff:ff00::add:2
+					alternate NXDOMAIN,SERVFAIL,REFUSED . 185.12.64.1
+					alternate NXDOMAIN,SERVFAIL,REFUSED . 185.12.64.2
+
+					# Fallback to Cloudflare.
+					alternate NXDOMAIN,SERVFAIL,REFUSED . 1.1.1.1
+
+					# Fallback to Google.
+					alternate NXDOMAIN,SERVFAIL,REFUSED . 8.8.8.8
+
+					cache
 				}
-
-				# Forward queries to Hetzner resolvers.
-				forward . 2a01:4ff:ff00::add:1
-				alternate NXDOMAIN,SERVFAIL,REFUSED . 2a01:4ff:ff00::add:2
-				alternate NXDOMAIN,SERVFAIL,REFUSED . 185.12.64.1
-				alternate NXDOMAIN,SERVFAIL,REFUSED . 185.12.64.2
-
-				# Fallback to Cloudflare.
-				alternate NXDOMAIN,SERVFAIL,REFUSED . 1.1.1.1
-
-				# Fallback to Google.
-				alternate NXDOMAIN,SERVFAIL,REFUSED . 8.8.8.8
-
-				cache
 			'';
 		};
 
