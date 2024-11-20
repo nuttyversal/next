@@ -5,8 +5,8 @@
 		hostName = "nuttygate";
 
 		nameservers = [
-			# nuttygate
-			"10.100.0.1"
+			# Nutty Network DNS
+			"127.0.0.1"
 
 			# Hetzner DNS resolvers (IPv6)
 			"2a01:4ff:ff00::add:1"
