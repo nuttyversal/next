@@ -127,6 +127,7 @@
 			virtualHosts = {
 				"vault.nuttynet" = {
 					extraConfig = ''
+						tls internal
 						reverse_proxy 10.100.0.2:9273
 					'';
 				};
