@@ -28,6 +28,13 @@
 			];
 		};
 
+		kernel = {
+			sysctl = {
+				# Enable IP forwarding.
+				"net.ipv4.ip_forward" = 1;
+			};
+		};
+
 		tmp = {
 			cleanOnBoot = true;
 		};
