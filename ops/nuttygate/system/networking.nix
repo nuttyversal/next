@@ -117,18 +117,34 @@
 	};
 
 	services = {
+		caddy = {
+			enable = true;
+
+			virtualHosts = {
+				"vault.nuttynet" = {
+					extraConfig = ''
+						reverse_proxy 10.100.0.2:9273
+					'';
+				};
+			};
+		};
+
 		coredns = {
 			enable = true;
 
 			config = ''
 				.:53 {
 					hosts {
-						# Nutty Network (nuttynet)
+						# Nutty Network Machines
 						10.100.0.1 nuttygate
 						10.100.0.2 nuttybox
 						10.100.0.3 nuttynas
 						10.100.0.4 nuttybook
 						10.100.0.5 nuttytower
+
+						# Nutty Network Services
+						10.100.0.1 vault.nuttynet
+
 						fallthrough
 					}
 
