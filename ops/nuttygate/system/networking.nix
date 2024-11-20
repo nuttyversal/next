@@ -102,14 +102,18 @@
 
 			extraCommands = ''
 				# Allow nuttynet machines to access Nuttyverse DNS.
-				iptables -A INPUT -p udp -s 10.100.0.0/24 --dport 53 -j ACCEPT
-				iptables -A INPUT -p tcp -s 10.100.0.0/24 --dport 53 -j ACCEPT
+				iptables -A INPUT -i wg0 -p udp --dport 53 -j ACCEPT
+				iptables -A INPUT -i wg0 -p tcp --dport 53 -j ACCEPT
+
+				# Allow HTTP/HTTPS from nuttynet machines to Caddy.
+				iptables -A INPUT -i wg0 -p tcp --dport 80 -j ACCEPT
+				iptables -A INPUT -i wg0 -p tcp --dport 443 -j ACCEPT
 
 				# Allow nuttynet machines to access the internet by masquerading as
 				# as the gateway's public IP via network address translation (NAT).
 				iptables -t nat -A POSTROUTING -s 10.100.0.0/24 -o eth0 -j MASQUERADE
 
-				# Allow forwarding between interfaces.
+				# Allow traffic forwarding between interfaces.
 				iptables -A FORWARD -i wg0 -j ACCEPT
 				iptables -A FORWARD -o wg0 -j ACCEPT
 			'';
