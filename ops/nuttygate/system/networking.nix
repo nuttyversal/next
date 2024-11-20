@@ -134,14 +134,8 @@
 						fallthrough
 					}
 
-					# Forward DNS queries.
-					forward . \
-						2a01:4ff:ff00::add:1 \
-						2a01:4ff:ff00::add:2 \
-						185.12.64.1 \
-						185.12.64.2 \
-						1.1.1.1 \
-						8.8.8.8
+					# Forward DNS queries to Hetzner, Cloudflare, and Google.
+					forward . 2a01:4ff:ff00::add:1 2a01:4ff:ff00::add:2 185.12.64.1 185.12.64.2 1.1.1.1 8.8.8.8
 
 					cache
 				}
