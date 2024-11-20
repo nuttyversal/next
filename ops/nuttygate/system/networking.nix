@@ -12,6 +12,12 @@
 			# Hetzner DNS resolvers (IPv4)
 			"185.12.64.1"
 			"185.12.64.2"
+
+			# Cloudflare
+			"1.1.1.1"
+
+			# Google
+			"8.8.8.8"
 		];
 
 		defaultGateway = "172.31.1.1";
@@ -116,15 +122,17 @@
 					}
 				}
 
-				forward . {
-					# Hetzner DNS resolvers (IPv6)
-					2a01:4ff:ff00::add:1
-					2a01:4ff:ff00::add:2
+				# Forward queries to Hetzner resolvers.
+				forward . 2a01:4ff:ff00::add:1
+				alternate NXDOMAIN,SERVFAIL,REFUSED . 2a01:4ff:ff00::add:2
+				alternate NXDOMAIN,SERVFAIL,REFUSED . 185.12.64.1
+				alternate NXDOMAIN,SERVFAIL,REFUSED . 185.12.64.2
 
-					# Hetzner DNS resolvers (IPv4)
-					185.12.64.1
-					185.12.64.2
-				}
+				# Fallback to Cloudflare.
+				alternate NXDOMAIN,SERVFAIL,REFUSED . 1.1.1.1
+
+				# Fallback to Google.
+				alternate NXDOMAIN,SERVFAIL,REFUSED . 8.8.8.8
 
 				cache
 			'';
