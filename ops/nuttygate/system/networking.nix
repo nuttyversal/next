@@ -118,9 +118,6 @@
 
 			config = ''
 				.:53 {
-					# Listen on localhost and WireGuard.
-					bind 127.0.0.1 10.100.0.1
-
 					hosts {
 						# Nutty Network (nuttynet)
 						10.100.0.1 nuttygate
@@ -131,17 +128,14 @@
 						fallthrough
 					}
 
-					# Forward queries to Hetzner resolvers.
-					forward . 2a01:4ff:ff00::add:1
-					alternate NXDOMAIN,SERVFAIL,REFUSED . 2a01:4ff:ff00::add:2
-					alternate NXDOMAIN,SERVFAIL,REFUSED . 185.12.64.1
-					alternate NXDOMAIN,SERVFAIL,REFUSED . 185.12.64.2
-
-					# Fallback to Cloudflare.
-					alternate NXDOMAIN,SERVFAIL,REFUSED . 1.1.1.1
-
-					# Fallback to Google.
-					alternate NXDOMAIN,SERVFAIL,REFUSED . 8.8.8.8
+					# Forward DNS queries.
+					forward . \
+						2a01:4ff:ff00::add:1 \
+						2a01:4ff:ff00::add:2 \
+						185.12.64.1 \
+						185.12.64.2 \
+						1.1.1.1 \
+						8.8.8.8
 
 					cache
 				}
