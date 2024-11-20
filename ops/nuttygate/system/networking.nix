@@ -101,6 +101,10 @@
 				# Allow nuttynet clients to access the internet by masquerading as
 				# as the gateway's public IP via network address translation (NAT).
 				iptables -t nat -A POSTROUTING -s 10.100.0.0/24 -o eth0 -j MASQUERADE
+
+				# Allow forwarding between interfaces.
+				iptables -A FORWARD -i wg0 -j ACCEPT
+				iptables -A FORWARD -o wg0 -j ACCEPT
 			'';
 		};
 	};
