@@ -97,8 +97,14 @@
 		firewall = {
 			enable = true;
 
-			# Listen for WireGuard connections.
-			allowedUDPPorts = [ 51820 ];
+			allowedTCPPorts = [
+				53 # DNS
+			];
+
+			allowedUDPPorts = [
+				53 # DNS
+				51820 # WireGuard
+			];
 
 			extraCommands = ''
 				# Allow nuttynet clients to access the internet by masquerading as
