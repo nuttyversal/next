@@ -175,7 +175,7 @@
 	environment = {
 		systemPackages = [
 			# For Caddy to generate self-signed TLS certificates.
-			pkgs.nss-tools
+			pkgs.nssTools
 		];
 	};
 }
