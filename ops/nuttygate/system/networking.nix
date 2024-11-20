@@ -5,14 +5,14 @@
 		hostName = "nuttygate";
 
 		nameservers = [
-			# Nutty Network DNS
+			# Nuttyverse
 			"127.0.0.1"
 
-			# Hetzner DNS resolvers (IPv6)
+			# Hetzner (IPv6)
 			"2a01:4ff:ff00::add:1"
 			"2a01:4ff:ff00::add:2"
 
-			# Hetzner DNS resolvers (IPv4)
+			# Hetzner (IPv4)
 			"185.12.64.1"
 			"185.12.64.2"
 
@@ -97,17 +97,15 @@
 		firewall = {
 			enable = true;
 
-			allowedTCPPorts = [
-				53 # DNS
-			];
-
-			allowedUDPPorts = [
-				53 # DNS
-				51820 # WireGuard
-			];
+			allowedTCPPorts = [ ];
+			allowedUDPPorts = [ 51820 ];
 
 			extraCommands = ''
-				# Allow nuttynet clients to access the internet by masquerading as
+				# Allow nuttynet machines to access Nuttyverse DNS.
+				iptables -A INPUT -p udp -s 10.100.0.0/24 --dport 53 -j ACCEPT
+				iptables -A INPUT -p tcp -s 10.100.0.0/24 --dport 53 -j ACCEPT
+
+				# Allow nuttynet machines to access the internet by masquerading as
 				# as the gateway's public IP via network address translation (NAT).
 				iptables -t nat -A POSTROUTING -s 10.100.0.0/24 -o eth0 -j MASQUERADE
 

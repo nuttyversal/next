@@ -10,7 +10,7 @@
 		};
 
 		nameservers = [
-			# nuttygate
+			# Nuttyverse
 			"10.100.0.1"
 
 			# Cloudflare
