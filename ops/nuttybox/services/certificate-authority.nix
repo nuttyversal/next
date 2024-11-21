@@ -16,7 +16,6 @@
 				root = "/host/tls/certificates/root-ca.crt";
 				crt = "/host/tls/certificates/intermediate-ca.crt";
 				key = "/host/tls/secrets/intermediate-ca-key";
-				password = "/host/tls/secrets/root-ca-password";
 
 				address = "10.100.0.2:8443";
 				dnsNames = [ "ca.nuttynet" ];
