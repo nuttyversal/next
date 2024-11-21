@@ -23,17 +23,13 @@
 				authority = {
 					provisioners = [
 						{
-							type = "JWK";
-							name = "mail@nuttyver.se";
-							key = {
-								use = "sig";
-								kty = "EC";
-								kid = "provisioner-key-id";
-								crv = "P-256";
-								alg = "ES256";
-								x = "70W6LRtewEivGA9sKKP2dMinnUFUia_rNrtLqWcX2i8";
-								y = "C_6gMSLp6bReAuEGHxSdZ8zmRP1i5snFOLlODSBHyNw";
-							};
+							use = "sig";
+							kty = "EC";
+							kid = "Lhiq1Ry9i3PLdlttXmfH5iX7gr9NXVvu_ksI2InoC3Q";
+							crv = "P-256";
+							alg = "ES256";
+							x = "Vdkcpm_IGH_TBPWST2E11XFFMBHwpHVaDLv2F1epJGY";
+							y = "0ZYX8bb_uhSoWcOvOUxJv-Ao7mHFq90UItvJL6ElDNA";
 						}
 					];
 				};
