@@ -26,7 +26,15 @@
 						{
 							type = "JWK";
 							name = "mail@nuttyver.se";
-							key = "/host/tls/secrets/provisioner-key";
+							key = {
+								use = "sig";
+								kty = "EC";
+								kid = "provisioner-key-id";
+								crv = "P-256";
+								alg = "ES256";
+								x = "70W6LRtewEivGA9sKKP2dMinnUFUia_rNrtLqWcX2i8";
+								y = "C_6gMSLp6bReAuEGHxSdZ8zmRP1i5snFOLlODSBHyNw";
+							};
 						}
 					];
 				};
