@@ -151,6 +151,7 @@
 						10.100.0.5 nuttytower
 
 						# Nutty Network Services
+						10.100.0.1 ca.nuttynet
 						10.100.0.1 vault.nuttynet
 
 						fallthrough
