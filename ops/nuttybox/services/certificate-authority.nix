@@ -7,7 +7,7 @@
 				nutty-ca = {
 					image = "smallstep/step-ca";
 					volumes = [ "/data/certificates:/home/step" ];
-					ports = [ "8443:9000" ];
+					ports = [ "8443:8443" ];
 				};
 			};
 		};
