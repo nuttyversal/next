@@ -48,6 +48,7 @@
 	security = {
 		pki = {
 			certificateFiles = [
+				../../certificates/caddy.crt
 				../../certificates/nuttyverse.crt
 			];
 		};
