@@ -47,23 +47,8 @@
 
 	security = {
 		pki = {
-			certificates = [
-				''
-					Nuttyverse
-					==========
-					-----BEGIN CERTIFICATE-----
-					MIIBszCCAVmgAwIBAgIQCscYRo0tw4ZV5A7R9pZ0STAKBggqhkjOPQQDAjA4MRYw
-					FAYDVQQKEw1OdXR0eXZlcnNlIENBMR4wHAYDVQQDExVOdXR0eXZlcnNlIENBIFJv
-					b3QgQ0EwHhcNMjQxMTIzMTY0NTU5WhcNMzQxMTIxMTY0NTU5WjA4MRYwFAYDVQQK
-					Ew1OdXR0eXZlcnNlIENBMR4wHAYDVQQDExVOdXR0eXZlcnNlIENBIFJvb3QgQ0Ew
-					WTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATugRACvdc+f5mel3UewjaL1fDMxNcK
-					UjBLYl9kzU7poJlaVFB6wpqUZCwbO7pJvxBRg+14uuLo5HK5Tv7NwwBEo0UwQzAO
-					BgNVHQ8BAf8EBAMCAQYwEgYDVR0TAQH/BAgwBgEB/wIBATAdBgNVHQ4EFgQUWCCP
-					eExhc8IrY9aRVi4wFt4gy+cwCgYIKoZIzj0EAwIDSAAwRQIhALNWEyBfhK0K6hRE
-					yNFuYKCctLNRv02ZblJiZsoc/klrAiAJOsJiyJYfL4q1nvilW1kDGJQHcbW6wXx7
-					V2tF49AgzQ==
-					-----END CERTIFICATE-----
-				''
+			certificateFiles = [
+				../../certificates/nuttyverse.crt
 			];
 		};
 	};

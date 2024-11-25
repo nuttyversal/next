@@ -173,6 +173,14 @@
 		};
 	};
 
+	security = {
+		pki = {
+			certificateFiles = [
+				../../certificates/nuttyverse.crt
+			];
+		};
+	};
+
 	environment = {
 		systemPackages = [
 			# For Caddy to generate self-signed TLS certificates.
