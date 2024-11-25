@@ -108,6 +108,10 @@
 				iptables -A INPUT -i wg0 -p udp --dport 53 -j ACCEPT
 				iptables -A INPUT -i wg0 -p tcp --dport 53 -j ACCEPT
 
+				# Allow nuttynet machines to access Nuttyverse CA.
+				iptables -A FORWARD -i wg0 -p tcp --dport 8443 -d 10.100.0.2 -j ACCEPT
+				iptables -A FORWARD -o wg0 -p tcp --sport 8443 -s 10.100.0.2 -j ACCEPT
+
 				# Allow HTTP/HTTPS from nuttynet machines to Caddy.
 				iptables -A INPUT -i wg0 -p tcp --dport 80 -j ACCEPT
 				iptables -A INPUT -i wg0 -p tcp --dport 443 -j ACCEPT
