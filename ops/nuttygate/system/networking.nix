@@ -135,7 +135,15 @@
 				"ca.nuttynet" = {
 					extraConfig = ''
 						tls internal
-						reverse_proxy 10.100.0.2:8443
+
+						reverse_proxy 10.100.0.2:8443 {
+							transport http {
+								tls
+
+								# Using internal certificates.
+								tls_insecure_skip_verify
+							}
+						}
 					'';
 				};
 
