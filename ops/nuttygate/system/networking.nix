@@ -135,10 +135,12 @@
 				"ca.nuttynet" = {
 					extraConfig = ''
 						reverse_proxy 10.100.0.2:8443 {
-							tls
+							transport http {
+								tls
 
-							# CA certificate is self-signed.
-							tls_insecure_skip_verify
+								# CA certificate is self-signed.
+								tls_insecure_skip_verify
+							}
 						}
 
 						tls {
