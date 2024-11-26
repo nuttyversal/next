@@ -134,8 +134,6 @@
 			virtualHosts = {
 				"ca.nuttynet" = {
 					extraConfig = ''
-						tls internal
-
 						reverse_proxy 10.100.0.2:8443 {
 							transport http {
 								tls
@@ -144,13 +142,19 @@
 								tls_insecure_skip_verify
 							}
 						}
+
+						tls internal
 					'';
 				};
 
 				"vault.nuttynet" = {
 					extraConfig = ''
-						tls internal
 						reverse_proxy 10.100.0.2:9273
+
+						tls {
+							ca https://ca.nuttynet/acme/acme/directory
+							ca_root ${../../certificates/nuttyverse.crt}
+						}
 					'';
 				};
 			};
