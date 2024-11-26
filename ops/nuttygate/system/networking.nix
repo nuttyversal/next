@@ -154,6 +154,7 @@
 						tls {
 							ca https://ca.nuttynet/acme/acme/directory
 							ca_root ${../../certificates/nuttyverse.crt}
+							trusted_roots ${../../certificates/nuttyverse.crt}
 						}
 					'';
 				};
