@@ -129,7 +129,7 @@
 
 	services = {
 		caddy = {
-			enable = true;
+			enable = false;
 
 			virtualHosts = {
 				"ca.nuttynet" = {
