@@ -5,6 +5,15 @@ ca.nuttynet {
 				pem_file /trust/nuttyverse.crt
 			}
 		}
+
+		tls {
+			issuer acme {
+				dir https://ca.nuttynet/acme/acme/directory
+				trusted_roots /trust/nuttyverse.crt
+				email mail@nuttyver.se
+				disable_tlsalpn_challenge
+			}
+		}
 	}
 
 	tls internal
