@@ -21,17 +21,6 @@
 						"${../config}:/etc/caddy"
 					];
 
-					ports = [
-						# HTTP
-						"80:80"
-
-						# HTTPS
-						"443:443"
-
-						# HTTP/3 (QUIC)
-						"443:443/udp"
-					];
-
 					extraOptions = [
 						# Caddy ships with HTTP/3 support enabled by default. To
 						# improve the performance of this UDP based protocol, the
@@ -40,6 +29,9 @@
 						# to override the low default limits of the operating system
 						# without having to change kernel parameters via sysctl.
 						"--cap-add=NET_ADMIN"
+
+						# Allow Caddy to proxy requests to machines in nuttynet.
+						"--network=host"
 					];
 				};
 			};
