@@ -16,6 +16,7 @@ vault.nuttynet {
 		issuer acme {
 			dir https://ca.nuttynet/acme/acme/directory
 			trusted_roots /trust/nuttyverse.crt
+			email mail@nuttyver.se
 		}
 	}
 }
