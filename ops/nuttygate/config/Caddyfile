@@ -1,30 +1,14 @@
 ca.nuttynet {
 	reverse_proxy 10.100.0.2:8443 {
 		transport http {
-			tls_trust_pool file {
-				pem_file /trust/nuttyverse.crt
-			}
+			tls
 		}
 	}
 
-	tls {
-		issuer acme {
-			dir https://100.100.0.2:8443/acme/acme/directory
-			trusted_roots /trust/caddy.crt /trust/nuttyverse.crt
-			email mail@nuttyver.se
-			disable_tlsalpn_challenge
-		}
-	}
+	tls internal
 }
 
 vault.nuttynet {
 	reverse_proxy 10.100.0.2:9273
-
-	tls {
-		issuer acme {
-			dir https://ca.nuttynet/acme/acme/directory
-			trusted_roots /trust/caddy.crt /trust/nuttyverse.crt
-			email mail@nuttyver.se
-		}
-	}
+	tls internal
 }
