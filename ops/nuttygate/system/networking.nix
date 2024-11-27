@@ -129,34 +129,13 @@
 
 	services = {
 		caddy = {
-			enable = false;
+			enable = true;
 
 			virtualHosts = {
-				"ca.nuttynet" = {
-					extraConfig = ''
-						reverse_proxy 10.100.0.2:8443 {
-							transport http {
-								tls
-
-								# CA certificate is self-signed.
-								tls_insecure_skip_verify
-							}
-						}
-
-						tls {
-							ca_root ${../../certificates/nuttyverse.crt}
-						}
-					'';
-				};
-
 				"vault.nuttynet" = {
 					extraConfig = ''
 						reverse_proxy 10.100.0.2:9273
-
-						tls {
-							ca https://ca.nuttynet/acme/acme/directory
-							ca_root ${../../certificates/nuttyverse.crt}
-						}
+						tls internal
 					'';
 				};
 			};
@@ -202,7 +181,6 @@
 		pki = {
 			certificateFiles = [
 				../../certificates/caddy.crt
-				../../certificates/nuttyverse.crt
 			];
 		};
 	};
