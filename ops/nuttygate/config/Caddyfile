@@ -1,9 +1,13 @@
 ca.nuttynet {
 	reverse_proxy 10.100.0.2:8443 {
 		transport http {
-			tls
+			tls_trust_pool file {
+				pem_file /trust/nuttyverse.crt
+			}
 		}
 	}
+
+	tls internal
 }
 
 vault.nuttynet {
