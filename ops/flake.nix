@@ -31,7 +31,6 @@
 
 					modules = [
 						./nuttybox/configuration.nix
-						./nuttybox/configuration.hardware.nix
 						agenix.nixosModules.default
 					];
 
@@ -45,7 +44,6 @@
 
 					modules = [
 						./nuttygate/configuration.nix
-						./nuttygate/configuration.hardware.nix
 					];
 
 					specialArgs = {
