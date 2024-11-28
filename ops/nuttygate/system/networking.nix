@@ -100,7 +100,7 @@
 		firewall = {
 			enable = true;
 
-			allowedTCPPorts = [ ];
+			allowedTCPPorts = [ 22 ];
 			allowedUDPPorts = [ 51820 ];
 
 			extraCommands = ''
@@ -173,6 +173,15 @@
 				# Ensure network interface is named eth0.
 				ATTR{address}=="96:00:03:dc:32:f8", NAME="eth0"
 			'';
+		};
+
+		services = {
+			openssh = {
+				enable = true;
+
+				# Send 💓 every 60 seconds to prevent timeouts.
+				extraConfig = "ClientAliveInterval 60";
+			};
 		};
 	};
 

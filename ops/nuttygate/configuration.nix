@@ -8,7 +8,6 @@
 		# System Configuration
 		./system/containers.nix
 		./system/networking.nix
-		./system/openssh.nix
 		./system/users.nix
 
 		# Service Configuration

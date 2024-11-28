@@ -24,6 +24,7 @@
 
 		firewall = {
 			enable = true;
+			allowedTCPPorts = [ 22 ];
 		};
 
 		wireguard = {
@@ -50,6 +51,26 @@
 			certificateFiles = [
 				../../certificates/caddy.crt
 			];
+		};
+	};
+
+	services = {
+		openssh = {
+			enable = true;
+
+			hostKeys = [
+				{
+					path = "/host/ssh/ed25519.key";
+					type = "ed25519";
+				}
+			];
+
+			# Send 💓 every 60 seconds to prevent timeouts.
+			extraConfig = "ClientAliveInterval 60";
+
+			settings = {
+				PermitRootLogin = "yes";
+			};
 		};
 	};
 }
