@@ -1,13 +1,3 @@
-ca.nuttynet {
-	reverse_proxy 10.100.0.2:8443 {
-		transport http {
-			tls
-		}
-	}
-
-	tls internal
-}
-
 vault.nuttynet {
 	reverse_proxy 10.100.0.2:9273
 	tls internal

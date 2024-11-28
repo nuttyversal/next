@@ -12,7 +12,6 @@
 		./system/users.nix
 
 		# Service Configuration
-		./services/certificate-authority.nix
 		./services/postgresql.nix
 		./services/vaultwarden.nix
 
