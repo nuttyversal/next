@@ -36,7 +36,7 @@ local function infer_project_root_directory(markers)
 end
 
 vim.api.nvim_create_autocmd({ "LspAttach" }, {
-	callback = function (args)
+	callback = function(args)
 		local lsp_client = vim.lsp.get_client_by_id(args.data.client_id)
 
 		if lsp_client ~= nil then
@@ -60,7 +60,7 @@ vim.api.nvim_create_autocmd({ "LspAttach" }, {
 				vim.keymap.set("n", "<Space>cc", vim.lsp.codelens.run)
 
 				-- Auto-refresh code lenses.
-				vim.api.nvim_create_autocmd({ 'TextChanged', 'InsertLeave' }, {
+				vim.api.nvim_create_autocmd({ "TextChanged", "InsertLeave" }, {
 					callback = function()
 						vim.lsp.codelens.refresh()
 					end,
@@ -71,7 +71,7 @@ vim.api.nvim_create_autocmd({ "LspAttach" }, {
 				vim.keymap.set("n", "<Space>cr", vim.lsp.buf.rename)
 			end
 		end
-	end
+	end,
 })
 
 vim.api.nvim_create_autocmd({ "FileType" }, {

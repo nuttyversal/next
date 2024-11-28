@@ -45,6 +45,9 @@
 
 ## Plugins
 
+* [nvim-surround](https://github.com/kylechui/nvim-surround)
+	* Surround selections, stylishly
+
 * [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
 	* Syntax highlighting
 	* Incremental selection
