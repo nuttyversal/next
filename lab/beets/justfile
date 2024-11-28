@@ -25,15 +25,9 @@ project := `basename (pwd)`
 		~/.config/beets/config.yaml
 	fish --no-config ./scripts/install.fish
 
-@build: install
-	echo "[INFO] Building $project…"
-
-@test: build
+@test:
 	echo "[INFO] Testing $project…"
 	fish --no-config ./scripts/test.fish
-
-@deploy: test
-	echo "[INFO] Deploying $project…"
 
 @clean:
 	echo "[INFO] Cleaning $project…"

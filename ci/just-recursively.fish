@@ -10,6 +10,18 @@ for justfile in $justfiles
 		continue
 	end
 
+	# Does the recipe exist?
+	just \
+		--justfile=$justfile \
+		--working-directory=(dirname $justfile) \
+		--list \
+			| rg "^\s*$justargs[1]\$" > /dev/null
+
+	if test $status -ne 0
+		continue
+	end
+
+	# Then, let 'em cook!
 	just \
 		--justfile=$justfile \
 		--working-directory=(dirname $justfile) \

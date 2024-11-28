@@ -25,18 +25,6 @@ project := `basename (pwd)`
 		--verbose \
 		(pwd) ~/.config/nvim
 
-@build: install
-	echo "[INFO] Building $project…"
-
-@test: build
-	echo "[INFO] Testing $project…"
-
-@deploy: test
-	echo "[INFO] Deploying $project…"
-
-@clean:
-	echo "[INFO] Cleaning $project…"
-
 @update:
 	echo "[INFO] Updating $project…"
 	nix flake update

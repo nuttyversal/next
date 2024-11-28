@@ -24,9 +24,6 @@ project := `basename (pwd)`
 	echo "[INFO] Testing $project…"
 	fish --no-config ./scripts/test.fish
 
-@deploy: test
-	echo "[INFO] Deploying $project…"
-
 @clean:
 	echo "[INFO] Cleaning $project…"
 	rm --force --verbose result

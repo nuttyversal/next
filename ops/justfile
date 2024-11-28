@@ -16,18 +16,6 @@ project := `basename (pwd)`
 	echo "[INFO] Entering $project shell…"
 	nix develop --command fish
 
-@build:
-	echo "[INFO] Building $project…"
-
-@test: build
-	echo "[INFO] Testing $project…"
-
-@deploy: test
-	echo "[INFO] Deploying $project…"
-
-@clean:
-	echo "[INFO] Cleaning $project…"
-
 @update:
 	echo "[INFO] Updating $project…"
 	nix flake update
