@@ -175,13 +175,11 @@
 			'';
 		};
 
-		services = {
-			openssh = {
-				enable = true;
+		openssh = {
+			enable = true;
 
-				# Send 💓 every 60 seconds to prevent timeouts.
-				extraConfig = "ClientAliveInterval 60";
-			};
+			# Send 💓 every 60 seconds to prevent timeouts.
+			extraConfig = "ClientAliveInterval 60";
 		};
 	};
 
