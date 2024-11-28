@@ -7,6 +7,7 @@
 	imports = [
 		# System Configuration
 		./system/containers.nix
+		./system/hardware.nix
 		./system/networking.nix
 		./system/users.nix
 
