@@ -67,6 +67,10 @@
 	* Super fast — uses custom SIMD fuzzy searcher
 	* Experimental (beta testing)
 
+* [avante.nvim](https://github.com/yetone/avante.nvim)
+	* AI-powered code assistance
+	* Emulates [Cursor](https://www.cursor.com/) AI IDE
+
 * [conform.nvim](https://github.com/stevearc/conform.nvim)
 	* Formatter configuration
 	* Applies text edits with LSP
