@@ -7,7 +7,7 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "npm run build:styles",
+		"build": "pnpm run build:styles",
 		"build:styles": "sass styles:dist/styles --style compressed",
 		"dev": "sass styles:dist/styles --watch",
 		"clean": "rm -rf dist",
