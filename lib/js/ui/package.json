@@ -1,8 +1,16 @@
 {
 	"name": "@nuttyverse/ui",
 	"version": "1.0.0",
-	"main": "index.js",
+	"main": "dist/index.js",
+	"style": "dist/styles/global.css",
+	"files": [
+		"dist"
+	],
 	"scripts": {
+		"build": "npm run build:styles",
+		"build:styles": "sass styles:dist/styles --style compressed",
+		"dev": "sass styles:dist/styles --watch",
+		"clean": "rm -rf dist",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"devDependencies": {

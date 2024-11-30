@@ -1,0 +1,6 @@
+{
+  "includePaths": ["styles"],
+  "outputStyle": "compressed",
+  "sourceMap": true,
+  "sourceMapEmbed": true
+}
