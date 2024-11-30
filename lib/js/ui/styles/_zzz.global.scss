@@ -1,0 +1,8 @@
+@use "sass:map";
+@use "spacing.variables" as *;
+
+.container {
+	width: 36rem;
+	margin: map.get($relative-spacing, "4");
+	padding: map.get($relative-spacing, "4");
+}
