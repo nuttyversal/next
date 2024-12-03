@@ -1,13 +1,13 @@
 {
-  // Directory to search for @import/@use statements
-  "includePaths": ["styles"],
-  
-  // Minify output CSS for production
-  "outputStyle": "compressed",
-  
-  // Generate source maps for debugging
-  "sourceMap": true,
-  
-  // Embed source maps in CSS instead of separate files
-  "sourceMapEmbed": true
+	// Directory to search for @import & @use statements.
+	"includePaths": ["styles"],
+
+	// Minify output CSS for production.
+	"outputStyle": "compressed",
+
+	// Generate source maps for debugging.
+	"sourceMap": true,
+
+	// Embed source maps in CSS instead of separate files.
+	"sourceMapEmbed": true
 }
