@@ -10,8 +10,7 @@
 		"build": "pnpm run build:styles",
 		"build:styles": "sass styles:dist/styles --style compressed",
 		"dev": "sass styles:dist/styles --watch",
-		"clean": "rm -rf dist",
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"clean": "rm -rf dist"
 	},
 	"devDependencies": {
 		"sass": "^1.81.0"
