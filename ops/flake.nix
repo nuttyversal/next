@@ -50,6 +50,18 @@
 						inherit inputs;
 					};
 				};
+
+				nuttynas = nixpkgs.lib.nixosSystem {
+					system = "x86_64-linux";
+
+					modules = [
+						./nuttynas/configuration.nix
+					];
+
+					specialArgs = {
+						inherit inputs;
+					};
+				};
 			};
 		}
 		// flake-utils.lib.eachDefaultSystem (
