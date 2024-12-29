@@ -36,10 +36,6 @@ in
 				hashedPassword = emilyPassword;
 			};
 
-			family = {
-				isNormalUser = false;
-			};
-
 			root = {
 				hashedPassword = rootPassword;
 
@@ -49,6 +45,11 @@ in
 					};
 				};
 			};
+
+			family = {
+				isSystemUser = true;
+				group = "family";
+			};
 		};
 
 		groups = {
@@ -57,6 +58,7 @@ in
 				members = [
 					"nutty"
 					"emily"
+					"family"
 				];
 			};
 		};
