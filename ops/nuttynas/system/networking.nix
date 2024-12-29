@@ -70,6 +70,7 @@
 					"server string" = "NAS";
 					"server role" = "standalone server";
 					"map to guest" = "bad user";
+					"private dir" = "/data/samba";
 				};
 
 				Nutty = {
