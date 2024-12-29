@@ -76,7 +76,8 @@
 			fsType = "zfs";
 
 			# This directory contains the host SSH keys which are used to decrypt
-			# age-encrypted secrets. Ensure it is mounted in the initial ramdisk.
+			# age-encrypted secrets and the ZFS keys for mounting encrypted datasets.
+			# Ensure it is mounted in the initial ramdisk.
 			neededForBoot = true;
 		};
 
@@ -106,6 +107,35 @@
 		cpu = {
 			amd = {
 				updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+			};
+		};
+	};
+
+	services = {
+		zfs = {
+			autoSnapshot = {
+				enable = true;
+
+				# 15-minute snapshots, keeping last 4; 1 hour of quick recovery.
+				frequent = 4;
+
+				# Hourly snapshots, keeping last 24; 1 day of hourly points.
+				hourly = 24;
+
+				# Daily snapshots, keeping last 7; 1 week of daily points.
+				daily = 7;
+
+				# Weekly snapshots, keeping last 4; 1 month of weekly points.
+				weekly = 4;
+
+				# Monthly snapshots, keeping last 12; 1 year of monthly points.
+				monthly = 12;
+			};
+
+			# Check & correct data corruption.
+			autoScrub = {
+				enable = true;
+				interval = "weekly";
 			};
 		};
 	};
