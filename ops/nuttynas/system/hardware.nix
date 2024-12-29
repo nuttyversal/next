@@ -96,32 +96,32 @@
 			fsType = "zfs";
 		};
 
-		"/nas/shared/encrypted" = {
+		"/nas/shared/Encrypted" = {
 			device = "nuttyloot/shared/encrypted";
 			fsType = "zfs";
 		};
 
-		"/nas/shared/movies" = {
+		"/nas/shared/Movies" = {
 			device = "nuttyloot/shared/movies";
 			fsType = "zfs";
 		};
 
-		"/nas/shared/music" = {
+		"/nas/shared/Music" = {
 			device = "nuttyloot/shared/music";
 			fsType = "zfs";
 		};
 
-		"/nas/shared/music/nutty" = {
+		"/nas/shared/Music/Nutty" = {
 			device = "nuttyloot/shared/music/nutty";
 			fsType = "zfs";
 		};
 
-		"/nas/shared/music/emily" = {
+		"/nas/shared/Music/Emily" = {
 			device = "nuttyloot/shared/music/emily";
 			fsType = "zfs";
 		};
 
-		"/nas/shared/tv" = {
+		"/nas/shared/TV" = {
 			device = "nuttyloot/shared/tv";
 			fsType = "zfs";
 		};
