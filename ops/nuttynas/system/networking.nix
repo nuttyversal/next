@@ -52,38 +52,36 @@
 					"map to guest" = "bad user";
 				};
 
-				shares = {
-					"nutty" = {
-						"path" = "/nas/unshared/nutty";
-						"valid users" = "nutty";
-						"force user" = "nutty";
-						"force group" = "users";
-						"read only" = "no";
-						"browseable" = "yes";
-						"create mask" = "0644";
-						"directory mask" = "0755";
-					};
+				nutty = {
+					"path" = "/nas/unshared/nutty";
+					"valid users" = "nutty";
+					"force user" = "nutty";
+					"force group" = "users";
+					"read only" = "no";
+					"browseable" = "yes";
+					"create mask" = "0644";
+					"directory mask" = "0755";
+				};
 
-					"emily" = {
-						"path" = "/nas/unshared/emily";
-						"valid users" = "emily";
-						"force user" = "emily";
-						"force group" = "users";
-						"read only" = "no";
-						"browseable" = "yes";
-						"create mask" = "0644";
-						"directory mask" = "0755";
-					};
+				emily = {
+					"path" = "/nas/unshared/emily";
+					"valid users" = "emily";
+					"force user" = "emily";
+					"force group" = "users";
+					"read only" = "no";
+					"browseable" = "yes";
+					"create mask" = "0644";
+					"directory mask" = "0755";
+				};
 
-					"shared" = {
-						"path" = "/nas/shared";
-						"valid users" = "@family";
-						"force group" = "family";
-						"read only" = "no";
-						"browseable" = "yes";
-						"create mask" = "0664";
-						"directory mask" = "0775";
-					};
+				shared = {
+					"path" = "/nas/shared";
+					"valid users" = "@family";
+					"force group" = "family";
+					"read only" = "no";
+					"browseable" = "yes";
+					"create mask" = "0664";
+					"directory mask" = "0775";
 				};
 			};
 		};
