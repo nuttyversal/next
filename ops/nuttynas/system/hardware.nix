@@ -86,6 +86,41 @@
 			fsType = "zfs";
 		};
 
+		"/nas/shared/encrypted" = {
+			device = "nuttyloot/shared/encrypted";
+			fsType = "zfs";
+		};
+
+		"/nas/shared/movies" = {
+			device = "nuttyloot/shared/movies";
+			fsType = "zfs";
+		};
+
+		"/nas/shared/music/nutty" = {
+			device = "nuttyloot/shared/music/nutty";
+			fsType = "zfs";
+		};
+
+		"/nas/shared/music/emily" = {
+			device = "nuttyloot/shared/music/emily";
+			fsType = "zfs";
+		};
+
+		"/nas/shared/tv" = {
+			device = "nuttyloot/shared/tv";
+			fsType = "zfs";
+		};
+
+		"/nas/unshared/nutty" = {
+			device = "nuttyloot/unshared/nutty";
+			fsType = "zfs";
+		};
+
+		"/nas/unshared/emily" = {
+			device = "nuttyloot/unshared/emily";
+			fsType = "zfs";
+		};
+
 		"/boot" = {
 			device = "nuttyboot/boot";
 			fsType = "zfs";
