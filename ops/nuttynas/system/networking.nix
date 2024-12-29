@@ -118,6 +118,9 @@
 			openDefaultPorts = true;
 			guiAddress = "0.0.0.0:8384";
 
+			user = "family";
+			group = "family";
+
 			key = "/host/syncthing/key.pem";
 			cert = "/host/syncthing/cert.pem";
 
