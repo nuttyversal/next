@@ -44,7 +44,7 @@
 			enable = true;
 			securityType = "user";
 
-			extraConfig = ''
+			settings = ''
 				workgroup = WORKGROUP
 				server string = NAS
 				server role = standalone server
