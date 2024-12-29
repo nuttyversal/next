@@ -16,6 +16,7 @@ in
 				isNormalUser = true;
 				description = "nuttyversal";
 				home = "/home/nutty";
+				homeMode = "700";
 				extraGroups = [ "wheel" ];
 				hashedPassword = nuttyPassword;
 
@@ -30,6 +31,7 @@ in
 				isNormalUser = true;
 				description = "wifey";
 				home = "/home/emily";
+				homeMode = "700";
 				extraGroups = [ "wheel" ];
 				hashedPassword = emilyPassword;
 			};
