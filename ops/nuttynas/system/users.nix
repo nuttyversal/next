@@ -45,11 +45,6 @@ in
 					};
 				};
 			};
-
-			family = {
-				isSystemUser = true;
-				group = "family";
-			};
 		};
 
 		groups = {
@@ -58,7 +53,7 @@ in
 				members = [
 					"nutty"
 					"emily"
-					"family"
+					"syncthing"
 				];
 			};
 		};
