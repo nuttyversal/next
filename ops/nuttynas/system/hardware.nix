@@ -139,6 +139,10 @@
 		"/nas/unshared/emily" = {
 			device = "nuttyloot/unshared/emily";
 			fsType = "zfs";
+			options = [
+				"zfsutil"
+				"x-mount.mkdir=775"
+			];
 		};
 
 		"/boot" = {
