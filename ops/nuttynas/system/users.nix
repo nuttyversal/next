@@ -54,6 +54,7 @@ in
 					"nutty"
 					"emily"
 					"jellyfin"
+					"nzbget"
 					"radaar"
 					"syncthing"
 				];
