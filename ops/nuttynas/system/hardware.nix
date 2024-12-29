@@ -151,6 +151,11 @@
 			fsType = "zfs";
 		};
 
+		"/nas/unshared/emily/Videos" = {
+			device = "nuttyloot/unshared/emily/Videos";
+			fsType = "zfs";
+		};
+
 		"/boot" = {
 			device = "nuttyboot/boot";
 			fsType = "zfs";
