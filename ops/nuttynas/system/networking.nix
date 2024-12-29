@@ -162,13 +162,18 @@
 						devices = [ "MLE-PC" ];
 					};
 
-					"Videos" = {
-						path = "/nas/unshared/emily/Videos";
+					"Game Videos" = {
+						path = "/nas/unshared/emily/Game Videos";
 						devices = [ "MLE-PC" ];
 					};
 
-					"Game Videos" = {
-						path = "/nas/unshared/emily/Game Videos";
+					"Movies" = {
+						path = "/nas/unshared/emily/Movies";
+						devices = [ "MLE-PC" ];
+					};
+
+					"TV" = {
+						path = "/nas/unshared/emily/TV";
 						devices = [ "MLE-PC" ];
 					};
 				};
