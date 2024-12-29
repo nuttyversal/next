@@ -122,6 +122,9 @@
 			overrideDevices = true;
 			overrideFolders = true;
 
+			dataDir = "/data/syncthing";
+			configDir = "/data/syncthing/config";
+
 			key = "/host/syncthing/key.pem";
 			cert = "/host/syncthing/cert.pem";
 
