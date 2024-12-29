@@ -18,7 +18,25 @@
 		firewall = {
 			enable = true;
 			allowPing = true;
-			allowedTCPPorts = [ 22 ];
+
+			allowedTCPPorts = [
+				# SSH
+				22
+
+				# Syncthing GUI
+				8384
+
+				# Syncthing (syncing)
+				22000
+			];
+
+			allowedUDPPorts = [
+				# Syncthing (syncing)
+				22000
+
+				# Syncthing (discovery)
+				21027
+			];
 		};
 	};
 
