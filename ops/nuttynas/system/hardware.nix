@@ -55,18 +55,6 @@
 		extraModulePackages = [ ];
 	};
 
-	systemd = {
-		tmpfiles = {
-			rules = [
-				# Ensure that mount points exist.
-				"d /nas 0755 root root -"
-				"d /nas/shared 0755 root root -"
-				"d /nas/shared/music 0755 root root -"
-				"d /nas/unshared 0755 root root -"
-			];
-		};
-	};
-
 	fileSystems = {
 		"/" = {
 			device = "nuttyroot/root";
