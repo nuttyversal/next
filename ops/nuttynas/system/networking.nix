@@ -54,7 +54,7 @@
 					"map to guest" = "bad user";
 				};
 
-				nutty = {
+				Nutty = {
 					"path" = "/nas/unshared/nutty";
 					"valid users" = "nutty";
 					"force user" = "nutty";
@@ -65,7 +65,7 @@
 					"directory mask" = "0755";
 				};
 
-				emily = {
+				Emily = {
 					"path" = "/nas/unshared/emily";
 					"valid users" = "emily";
 					"force user" = "emily";
@@ -76,7 +76,7 @@
 					"directory mask" = "0755";
 				};
 
-				shared = {
+				Shared = {
 					"path" = "/nas/shared";
 					"valid users" = "@family";
 					"force group" = "family";
