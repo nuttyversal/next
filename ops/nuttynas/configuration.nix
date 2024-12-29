@@ -12,6 +12,7 @@
 
 		# Service Configuration
 		./services/jellyfin.nix
+		./services/radaar.nix
 	];
 
 	time = {
