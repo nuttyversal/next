@@ -55,7 +55,7 @@ in
 					"emily"
 					"jellyfin"
 					"nzbget"
-					"radaar"
+					"radarr"
 					"syncthing"
 				];
 			};
