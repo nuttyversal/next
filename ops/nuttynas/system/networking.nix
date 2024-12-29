@@ -44,12 +44,12 @@
 			enable = true;
 			securityType = "user";
 
-			settings = ''
-				workgroup = WORKGROUP
-				server string = NAS
-				server role = standalone server
-				map to guest = bad user
-			'';
+			settings = {
+				"workgroup" = "WORKGROUP";
+				"server string" = "NAS";
+				"server role" = "standalone server";
+				"map to guest" = "bad user";
+			};
 
 			shares = {
 				"nutty" = {
