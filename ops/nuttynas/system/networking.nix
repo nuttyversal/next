@@ -93,5 +93,70 @@
 			enable = true;
 			openFirewall = true;
 		};
+
+		# File synchronization between PCs and NAS.
+		syncthing = {
+			enable = true;
+			openDefaultPorts = true;
+
+			key = "/host/syncthing/key.pem";
+			cert = "/host/syncthing/cert.pem";
+
+			settings = {
+				gui = {
+					user = "admin";
+					password = "admin";
+				};
+
+				devices = {
+					"MLE-PC" = {
+						id = "OXFBHGP-UVHO7WL-NWP3YIN-IEGI5FD-2DSFIDS-SL27CA4-67VSWUP-HS7NFQV";
+					};
+				};
+
+				folders = {
+					"Documents" = {
+						path = "/nas/unshared/emily/Documents";
+						devices = [ "MLE-PC" ];
+					};
+
+					"Music" = {
+						path = "/nas/unshared/emily/Music";
+						devices = [ "MLE-PC" ];
+					};
+
+					"MusicBee" = {
+						path = "/nas/unshared/emily/MusicBee";
+						devices = [ "MLE-PC" ];
+					};
+
+					"Screenshots" = {
+						path = "/nas/unshared/emily/Screenshots";
+						devices = [ "MLE-PC" ];
+					};
+
+					"Videos" = {
+						path = "/nas/unshared/emily/Videos";
+						devices = [ "MLE-PC" ];
+					};
+
+					"Game Videos" = {
+						path = "/nas/unshared/emily/Game Videos";
+						devices = [ "MLE-PC" ];
+					};
+				};
+			};
+		};
+	};
+
+	systemd = {
+		services = {
+			syncthing = {
+				environment = {
+					# Disable default ~/Sync folder.
+					STNODEFAULTFOLDER = "true";
+				};
+			};
+		};
 	};
 }
