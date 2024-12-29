@@ -116,6 +116,7 @@
 		syncthing = {
 			enable = true;
 			openDefaultPorts = true;
+			guiAddress = "0.0.0.0:8384";
 
 			key = "/host/syncthing/key.pem";
 			cert = "/host/syncthing/cert.pem";
