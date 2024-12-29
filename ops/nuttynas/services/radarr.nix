@@ -6,6 +6,7 @@
 			enable = true;
 			openFirewall = true;
 			dataDir = "/data/radarr";
+			group = "family";
 		};
 	};
 }
