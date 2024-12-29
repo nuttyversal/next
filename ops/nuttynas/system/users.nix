@@ -53,6 +53,7 @@ in
 				members = [
 					"nutty"
 					"emily"
+					"jellyfin"
 					"syncthing"
 				];
 			};
