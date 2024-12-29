@@ -118,6 +118,10 @@
 			openDefaultPorts = true;
 			guiAddress = "0.0.0.0:8384";
 
+			# Prefer immutable configuration.
+			overrideDevices = true;
+			overrideFolders = true;
+
 			key = "/host/syncthing/key.pem";
 			cert = "/host/syncthing/cert.pem";
 
