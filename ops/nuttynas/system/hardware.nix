@@ -152,7 +152,7 @@
 		};
 
 		"/nas/unshared/emily/Videos" = {
-			device = "nuttyloot/unshared/emily/Videos";
+			device = "nuttyloot/unshared/emily/videos";
 			fsType = "zfs";
 		};
 
