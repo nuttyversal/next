@@ -5,9 +5,13 @@
 
 {
 	imports = [
+		# System Configuration
 		./system/hardware.nix
 		./system/networking.nix
 		./system/users.nix
+
+		# Service Configuration
+		./services/jellyfin.nix
 	];
 
 	time = {
