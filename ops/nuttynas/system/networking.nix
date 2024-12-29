@@ -17,6 +17,7 @@
 
 		firewall = {
 			enable = true;
+			allowPing = true;
 			allowedTCPPorts = [ 22 ];
 		};
 	};
@@ -84,6 +85,12 @@
 					"directory mask" = "0775";
 				};
 			};
+		};
+
+		# Used to advertise shares to Windows hosts.
+		samba-wsdd = {
+			enable = true;
+			openFirewall = true;
 		};
 	};
 }
