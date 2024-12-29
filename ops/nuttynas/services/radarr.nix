@@ -2,10 +2,10 @@
 
 {
 	services = {
-		radaar = {
+		radarr = {
 			enable = true;
 			openFirewall = true;
-			dataDir = "/data/radaar";
+			dataDir = "/data/radarr";
 		};
 	};
 }
