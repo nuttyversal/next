@@ -101,13 +101,11 @@
 		"/nas" = {
 			device = "nuttyloot";
 			fsType = "zfs";
-			options = [ "ro" ];
 		};
 
 		"/nas/shared" = {
 			device = "nuttyloot/shared";
 			fsType = "zfs";
-			options = [ "ro" ];
 		};
 
 		"/nas/shared/encrypted" = {
@@ -123,7 +121,6 @@
 		"/nas/shared/music" = {
 			device = "nuttyloot/shared/music";
 			fsType = "zfs";
-			options = [ "ro" ];
 		};
 
 		"/nas/shared/music/nutty" = {
@@ -144,7 +141,6 @@
 		"/nas/unshared" = {
 			device = "nuttyloot/unshared";
 			fsType = "zfs";
-			options = [ "ro" ];
 		};
 
 		"/nas/unshared/nutty" = {
