@@ -162,8 +162,8 @@
 						devices = [ "MLE-PC" ];
 					};
 
-					"Game Videos" = {
-						path = "/nas/unshared/emily/Game Videos";
+					"Videos" = {
+						path = "/nas/unshared/emily/Videos";
 						devices = [ "MLE-PC" ];
 					};
 
