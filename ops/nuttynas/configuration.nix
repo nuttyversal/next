@@ -13,6 +13,7 @@
 		# Service Configuration
 		./services/jellyfin.nix
 		./services/radarr.nix
+		./services/usenet.nix
 	];
 
 	time = {
