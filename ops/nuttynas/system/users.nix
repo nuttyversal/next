@@ -36,6 +36,10 @@ in
 				hashedPassword = emilyPassword;
 			};
 
+			family = {
+				isNormalUser = false;
+			};
+
 			root = {
 				hashedPassword = rootPassword;
 
