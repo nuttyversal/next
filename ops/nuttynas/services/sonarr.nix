@@ -2,7 +2,7 @@
 
 {
 	services = {
-		radarr = {
+		sonarr = {
 			enable = true;
 			openFirewall = true;
 			dataDir = "/data/sonarr";
