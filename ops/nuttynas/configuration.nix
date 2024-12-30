@@ -13,6 +13,7 @@
 		# Service Configuration
 		./services/jellyfin.nix
 		./services/radarr.nix
+		./services/sonarr.nix
 		./services/usenet.nix
 	];
 
