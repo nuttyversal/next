@@ -1,0 +1,19 @@
+# Window settings.
+theme = NvimDark
+window-theme = auto
+window-padding-x = 8
+window-padding-y = 4
+adjust-cell-height = 20%
+
+# Font settings.
+font-family = PragmataPro Mono Liga
+font-thicken = false
+
+# Cursor settings.
+cursor-style = block
+shell-integration-features = no-cursor
+
+# Mouse settings.
+mouse-hide-while-typing = true
+copy-on-select = true
+link-url = true
