@@ -5,10 +5,15 @@ end
 
 function postexec_test --on-event fish_postexec
 	if test $status -ne 0
-		# Output an error banner for failed commands.
-		set_color -b red black
-		echo "[ERROR] Command failed with status code ($status)"
+		# Display an error banner for failed commands.
+		set_color --background red --bold black
+		printf "[ERROR] Command failed with status code ($status)"
 		set_color normal
+
+		# Defer printing the line break until after the color
+		# is set back to normal so that the red doesn't bleed
+		# into the next line when the terminal scrolls.
+		echo
 	end
 
 	if not test $argv = 'clear'
