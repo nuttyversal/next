@@ -1,0 +1,10 @@
+#!/usr/bin/env -S just --justfile
+
+set export
+set shell := ["fish", "--no-config", "--command"]
+
+project := `basename (pwd)`
+
+@install:
+	echo "[INFO] Installing $project…"
+	fish ./settings.fish
