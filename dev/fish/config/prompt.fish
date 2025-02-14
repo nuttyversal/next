@@ -1,6 +1,74 @@
 function fish_prompt
-	echo [(hostname)] (prompt_pwd --full-length-dirs=2)
-	printf 'λ. '
+	# Did the last command fail?
+	if test $status -ne 0
+		set_color red
+		printf 'Ooof… '
+		set_color normal
+	end
+
+	# Sir Shelly, where are we?
+	if test (pwd) = /
+		printf 'Behold, the '
+		set_color red
+		printf '/'
+		set_color normal
+		printf ' of all files on '
+	else if test (pwd) = ~
+		printf 'Home, sweet '
+		set_color yellow
+		printf '~'
+		set_color normal
+		printf ' in '
+	else if string match -q "*/Downloads" (pwd)
+		printf 'The smuggler\'s bay of '
+		set_color yellow
+		printf (prompt_pwd --full-length-dirs=2)
+		set_color normal
+		printf ' in '
+	else
+		printf 'We are in '
+		if string match -q "*/Nuttyverse" (pwd)
+			printf 'the '
+		end
+		set_color yellow
+		printf (prompt_pwd --full-length-dirs=2)
+		set_color normal
+		printf ' on '
+	end
+
+	set_color yellow
+	printf (hostname)
+	set_color normal
+	echo "."
+
+	# Sir Shelly!
+	set special_prompts \
+		'Yes, my lord? ' \
+		'How may I serve? ' \
+		'Command me, sire! ' \
+		'What is thy bidding? ' \
+		'Awaiting orders… '
+
+	set special_index (random 1 (count $special_prompts))
+
+	if not set -q __fish_prompt_first_time
+		set -g __fish_prompt_first_time 1
+
+		# Beginner's luck.
+		set_color yellow
+		printf $special_prompts[$special_index]
+	else
+		set_color yellow
+
+		# Roll that D20. Need an 18 or higher.
+		if test (random 1 100) -le 15
+			printf $special_prompts[$special_index]
+		else
+			printf 'λ: '
+		end
+	end
+
+	set_color normal
 end
 
 function postexec_test --on-event fish_postexec
