@@ -27,7 +27,6 @@ tree.setup({
 		adaptive_size = true,
 		side = "left",
 		preserve_window_proportions = true,
-		width = 0,
 	},
 
 	git = {
