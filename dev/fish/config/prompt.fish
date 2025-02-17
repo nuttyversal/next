@@ -24,7 +24,7 @@ function fish_prompt
 		set_color yellow
 		printf (prompt_pwd --full-length-dirs=2)
 		set_color normal
-		printf ' in '
+		printf ' on '
 	else
 		printf 'We are in '
 		if string match -q "*/Nuttyverse" (pwd)
