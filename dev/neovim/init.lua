@@ -87,6 +87,7 @@ vim.opt.number = true
 vim.opt.foldcolumn = "0"
 
 -- Improve ✨ aesthetics ✨.
+vim.cmd("colorscheme nuttyverse")
 vim.opt.cursorline = true
 vim.opt.termguicolors = true
 
