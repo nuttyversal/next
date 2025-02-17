@@ -18,13 +18,12 @@ project := `basename (pwd)`
 
 @install:
 	echo "[INFO] Installing $project…"
-	mkdir --parents ~/.config/ghostty
 	ln \
 		--interactive \
 		--no-target-directory \
 		--symbolic \
 		--verbose \
-		(pwd)/config ~/.config/ghostty/config
+		(pwd) ~/.config/ghostty
 
 @update:
 	echo "[INFO] Updating $project…"

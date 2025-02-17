@@ -1,5 +1,5 @@
 # Window settings.
-theme = NvimDark
+theme = dark:moon,light:sun
 window-theme = auto
 window-padding-x = 8
 window-padding-y = 4
