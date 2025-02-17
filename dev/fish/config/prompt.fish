@@ -2,7 +2,7 @@ function fish_prompt
 	# Did the last command fail?
 	if test $status -ne 0
 		set_color red
-		printf 'Ooof… '
+		printf 'Oof… '
 		set_color normal
 	end
 
@@ -20,7 +20,7 @@ function fish_prompt
 		set_color normal
 		printf ' in '
 	else if string match -q "*/Downloads" (pwd)
-		printf 'The smuggler\'s bay of '
+		printf 'Fresh plunder awaits in '
 		set_color yellow
 		printf (prompt_pwd --full-length-dirs=2)
 		set_color normal
