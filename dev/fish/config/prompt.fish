@@ -64,7 +64,16 @@ function fish_prompt
 		if test (random 1 100) -le 15
 			printf $special_prompts[$special_index]
 		else
-			printf 'λ: '
+			# Display the git branch name (if inside repository).
+			if git rev-parse --is-inside-work-tree >/dev/null 2>&1
+				printf 'λ('
+				set_color normal
+				printf (git branch --show-current)
+				set_color yellow
+				printf '): '
+			else
+				printf 'λ: '
+			end
 		end
 	end
 
