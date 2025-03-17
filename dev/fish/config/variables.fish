@@ -5,6 +5,9 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 set --global --export GPG_TTY (tty)
 set --global --export GNUPGHOME ~/.config/gnupg
 
+# PostgreSQL
+fish_add_path /opt/homebrew/opt/postgresql@17/bin
+
 # Zoxide
 zoxide init fish | source
 
