@@ -71,6 +71,11 @@ vim.api.nvim_create_autocmd({ "LspAttach" }, {
 				vim.keymap.set("n", "<Space>cr", vim.lsp.buf.rename)
 			end
 		end
+
+		-- Toggle inlay hints (if supported by the LSP).
+		vim.keymap.set("n", "<Leader>ti", function()
+			vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
+		end, { noremap = true })
 	end,
 })
 
