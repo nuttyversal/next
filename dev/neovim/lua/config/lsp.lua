@@ -112,3 +112,68 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 		})
 	end,
 })
+
+vim.api.nvim_create_autocmd({ "FileType" }, {
+	desc = "Start the Rust language server (rust-analyzer) when editing Rust files",
+	group = vim.api.nvim_create_augroup("StartRustLanguageServer", { clear = true }),
+	pattern = "rust",
+
+	callback = function()
+		vim.lsp.start({
+			name = "rust-analyzer",
+			cmd = { "rust-analyzer" },
+			root_dir = infer_project_root_directory({ "Cargo.toml" }),
+
+			settings = {
+				["rust-analyzer"] = {
+					cargo = {
+						allFeatures = true,
+					},
+
+					checkOnSave = {
+						command = "clippy",
+					},
+
+					-- Enable procedural macro support.
+					-- Used by crates such as Tokio and Serde.
+					procMacro = {
+						enable = true,
+					},
+
+					inlayHints = {
+						-- Show the variable binding mode in patterns.
+						-- By value? By reference? By mutable reference?
+						bindingModeHints = {
+							enable = true,
+						},
+
+						-- Show the inferred return types of closures.
+						-- E.g., |x| x * 2 might be hinted as |x: &i32| -> i32 x * 2.
+						closureReturnTypeHints = {
+							enable = "always",
+						},
+
+						-- Show implicit expression adjustments.
+						-- Dereferencing. Borrowing. Coercion.
+						expressionAdjustmentHints = {
+							enable = "always",
+						},
+
+						-- Show implicit lifetime parameters omitted from signatures.
+						lifetimeElisionHints = {
+							enable = "always",
+							useParameterNames = true,
+						},
+
+						-- Show inferred types of variables and expressions.
+						typeHints = {
+							enable = true,
+							hideClosureInitialization = false,
+							hideNamedConstructor = false,
+						},
+					},
+				},
+			},
+		})
+	end,
+})
