@@ -15,6 +15,11 @@
 			inputs.nixpkgs.follows = "nixpkgs";
 		};
 
+		tmux = {
+			url = "./dev/tmux";
+			inputs.nixpkgs.follows = "nixpkgs";
+		};
+
 		beets = {
 			url = "./lab/beets";
 			inputs.nixpkgs.follows = "nixpkgs";
@@ -47,6 +52,7 @@
 					default = pkgs.mkShell {
 						inputsFrom = [
 							inputs.neovim.devShells.${system}.default
+							inputs.tmux.devShells.${system}.default
 							inputs.beets.devShells.${system}.default
 							inputs.nixfmtty.devShells.${system}.default
 						];
