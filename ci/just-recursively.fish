@@ -22,11 +22,21 @@ for justfile in $justfiles
 	end
 
 	# Then, let 'em cook!
-	just \
-		--justfile=$justfile \
-		--working-directory=(dirname $justfile) \
-		ci \
-			just $justargs
+	if test "$justargs[1]" = "update"
+		# Cloning git repos with submodules does not seem to work under the
+		# `just ci` context. I am not concerned about hermetic environments
+		# when fetching flakes externally.
+		just \
+			--justfile=$justfile \
+			--working-directory=(dirname $justfile) \
+			$justargs
+	else
+		just \
+			--justfile=$justfile \
+			--working-directory=(dirname $justfile) \
+			ci \
+				just $justargs
+	end
 
 	# Fail fast if a command fails.
 	if test $status -ne 0
