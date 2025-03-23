@@ -255,10 +255,11 @@ local function set_highlights()
 	vim.api.nvim_set_hl(0, "Normal", { fg = colors.gray12 })
 
 	-- Normal text in floating windows.
-	vim.api.nvim_set_hl(0, "NormalFloat", { fg = colors.gray12 })
+	vim.api.nvim_set_hl(0, "NormalFloat", { fg = colors.gray11 })
+	vim.api.nvim_set_hl(0, "@markup.raw.block", { fg = colors.gray11 })
 
 	-- Border of floating windows.
-	vim.api.nvim_set_hl(0, "FloatBorder", { fg = colors.yellow10 })
+	vim.api.nvim_set_hl(0, "FloatBorder", { fg = colors.gray06 })
 
 	-- Title of floating windows.
 	vim.api.nvim_set_hl(0, "FloatTitle", { fg = colors.gray12 })
@@ -270,16 +271,16 @@ local function set_highlights()
 	vim.api.nvim_set_hl(0, "NormalNC", { fg = colors.gray12 })
 
 	-- Popup menu: Normal item.
-	vim.api.nvim_set_hl(0, "Pmenu", { fg = colors.gray12 })
+	vim.api.nvim_set_hl(0, "Pmenu", { fg = colors.gray11 })
 
 	-- Popup menu: Selected item.
-	vim.api.nvim_set_hl(0, "PmenuSel", { fg = colors.gray12 })
+	vim.api.nvim_set_hl(0, "PmenuSel", { fg = colors.yellow10 })
 
 	-- Popup menu: Normal item "kind".
 	vim.api.nvim_set_hl(0, "PmenuKind", { fg = colors.gray12 })
 
 	-- Popup menu: Selected item "kind".
-	vim.api.nvim_set_hl(0, "PmenuKindSel", { fg = colors.gray12 })
+	vim.api.nvim_set_hl(0, "PmenuKindSel", { fg = colors.yellow10 })
 
 	-- Popup menu: Normal item "extra text".
 	vim.api.nvim_set_hl(0, "PmenuExtra", { fg = colors.gray12 })
@@ -288,16 +289,16 @@ local function set_highlights()
 	vim.api.nvim_set_hl(0, "PmenuExtraSel", { fg = colors.gray12 })
 
 	-- Popup menu: Scrollbar.
-	vim.api.nvim_set_hl(0, "PmenuSbar", { fg = colors.gray12 })
+	vim.api.nvim_set_hl(0, "PmenuSbar", { bg = colors.yellow10 })
 
 	-- Popup menu: Thumb of the scrollbar.
-	vim.api.nvim_set_hl(0, "PmenuThumb", { fg = colors.gray12 })
+	vim.api.nvim_set_hl(0, "PmenuThumb", { bg = colors.yellow10 })
 
 	-- Popup menu: Matched text in normal item.
-	vim.api.nvim_set_hl(0, "PmenuMatch", { fg = colors.gray12 })
+	vim.api.nvim_set_hl(0, "PmenuMatch", { fg = colors.yellow10 })
 
 	-- Popup menu: Matched text in selected item.
-	vim.api.nvim_set_hl(0, "PmenuMatchSel", { fg = colors.gray12 })
+	vim.api.nvim_set_hl(0, "PmenuMatchSel", { fg = colors.yellow10 })
 
 	-- hit-enter prompt and yes/no questions.
 	vim.api.nvim_set_hl(0, "Question", { fg = colors.gray12 })
@@ -472,6 +473,7 @@ end
 
 local function set_highlights_for_telescope()
 	vim.api.nvim_set_hl(0, "TelescopeBorder", { fg = colors.gray06 })
+	vim.api.nvim_set_hl(0, "TelescopeMatching", { fg = colors.yellow11 })
 end
 
 set_highlights()
