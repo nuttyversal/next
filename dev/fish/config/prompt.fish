@@ -110,9 +110,10 @@ function on_cancel --on-event fish_cancel
 	# Append a line break after an cancelled command.
 	# Commands can be cancelled with Ctrl + c.
 	#
-	# > $ hostna^C
+	# > $ hostna^C[KO]
 	# >
 	# > $ hostname
 	# > nuttybook
+	echo "[KO]"
 	echo
 end
