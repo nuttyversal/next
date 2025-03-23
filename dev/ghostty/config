@@ -17,3 +17,6 @@ shell-integration-features = no-cursor
 mouse-hide-while-typing = true
 copy-on-select = true
 link-url = true
+
+# Shaders settings.
+custom-shader = shaders/bloom.glsl
