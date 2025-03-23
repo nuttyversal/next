@@ -152,6 +152,9 @@ local function set_highlights()
 	-- Placeholder characters substituted for concealed.
 	vim.api.nvim_set_hl(0, "Conceal", { fg = colors.gray12 })
 
+	-- Copilot completion suggestion.
+	vim.api.nvim_set_hl(0, "CopilotSuggestion", { fg = colors.gray08 })
+
 	-- Current match for the last search pattern (see 'hlsearch').
 	vim.api.nvim_set_hl(0, "CurSearch", { fg = colors.gray01, bg = colors.yellow10 })
 
@@ -223,6 +226,9 @@ local function set_highlights()
 
 	-- Line number for when the 'relativenumber'.
 	vim.api.nvim_set_hl(0, "LineNrBelow", { fg = colors.gray12 })
+
+	-- LSP inlay hints.
+	vim.api.nvim_set_hl(0, "LspInlayHint", { fg = colors.gray08 })
 
 	-- Like LineNr when 'cursorline' is set and 'cursorlineopt'.
 	vim.api.nvim_set_hl(0, "CursorLineNr", { fg = colors.gray12 })

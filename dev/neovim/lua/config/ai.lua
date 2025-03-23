@@ -1,13 +1,8 @@
-local avante = require("avante")
+-- Instead of using tab to accept the completion …
+vim.g.copilot_no_tab_map = true
 
-avante.setup({
-	provider = "claude",
-	auto_suggestions_provider = "copilot",
-
-	claude = {
-		endpoint = "https://api.anthropic.com",
-		model = "claude-3-5-sonnet-20241022",
-		temperature = 0,
-		max_tokens = 4096,
-	},
+-- … use <C-i> to accept the completion.
+vim.keymap.set("i", "<C-i>", 'copilot#Accept("\\<CR>")', {
+	replace_keycodes = false,
+	expr = true,
 })
