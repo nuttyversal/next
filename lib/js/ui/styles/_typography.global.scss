@@ -24,6 +24,20 @@
 	}
 }
 
+code {
+	font-family: 'PragmataPro Liga', monospace;
+	font-size: map.get($type-scale, "xs");
+	font-variation-settings: unset;
+	font-feature-settings: 'ss03' 0;
+	border-radius: map.get($spacing, "0.5");
+	padding-top: map.get($spacing, "0.5");
+	padding-bottom: map.get($spacing, "0.5");
+	padding-left: map.get($spacing, "1");
+	padding-right: map.get($spacing, "1");
+	background: var(--inverted-gray-01);
+	color: var(--inverted-gray-12);
+}
+
 .with-drop-cap {
 	@include with-drop-cap;
 }
