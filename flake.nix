@@ -20,6 +20,16 @@
 			inputs.nixpkgs.follows = "nixpkgs";
 		};
 
+		language-tools-javascript = {
+			url = "./dev/languages/javascript";
+			inputs.nixpkgs.follows = "nixpkgs";
+		};
+
+		language-tools-lua = {
+			url = "./dev/languages/lua";
+			inputs.nixpkgs.follows = "nixpkgs";
+		};
+
 		beets = {
 			url = "./lab/beets";
 			inputs.nixpkgs.follows = "nixpkgs";
@@ -53,11 +63,14 @@
 						inputsFrom = [
 							inputs.neovim.devShells.${system}.default
 							inputs.tmux.devShells.${system}.default
+							inputs.language-tools-javascript.devShells.${system}.default
+							inputs.language-tools-lua.devShells.${system}.default
 							inputs.beets.devShells.${system}.default
 							inputs.nixfmtty.devShells.${system}.default
 						];
 
 						buildInputs = [
+							pkgs.coreutils
 							pkgs.git
 							pkgs.just
 							pkgs.nix
