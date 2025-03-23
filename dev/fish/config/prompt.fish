@@ -114,6 +114,8 @@ function on_cancel --on-event fish_cancel
 	# >
 	# > $ hostname
 	# > nuttybook
+	set_color red
 	echo "[KO]"
 	echo
+	set_color normal
 end
