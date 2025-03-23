@@ -1,5 +1,7 @@
 # Window settings.
 theme = dark:moon,light:sun
+background-opacity = 0.85
+background-blur = 20
 window-theme = auto
 window-padding-x = 8
 window-padding-y = 4
