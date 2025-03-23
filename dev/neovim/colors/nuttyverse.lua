@@ -153,7 +153,7 @@ local function set_highlights()
 	vim.api.nvim_set_hl(0, "Conceal", { fg = colors.gray12 })
 
 	-- Copilot completion suggestion.
-	vim.api.nvim_set_hl(0, "CopilotSuggestion", { fg = colors.gray08 })
+	vim.api.nvim_set_hl(0, "CopilotSuggestion", { fg = colors.gray07 })
 
 	-- Current match for the last search pattern (see 'hlsearch').
 	vim.api.nvim_set_hl(0, "CurSearch", { fg = colors.gray01, bg = colors.yellow10 })
