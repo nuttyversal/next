@@ -27,6 +27,6 @@ blink.setup({
 
 		signature_help = {
 			border = "single",
-		}
-	}
+		},
+	},
 })
