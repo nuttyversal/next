@@ -1,3 +1,4 @@
+--- @diagnostic disable: missing-fields
 local blink = require("blink.cmp")
 
 blink.setup({
