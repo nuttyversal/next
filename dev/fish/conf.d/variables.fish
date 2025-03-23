@@ -8,6 +8,9 @@ set --global --export GNUPGHOME ~/.config/gnupg
 # PostgreSQL
 fish_add_path /opt/homebrew/opt/postgresql@17/bin
 
+# Rust
+source "$HOME/.cargo/env.fish"
+
 # Zoxide
 zoxide init fish | source
 
