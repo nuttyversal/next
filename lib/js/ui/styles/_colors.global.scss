@@ -19,6 +19,9 @@
 	background: $white;
 	color: $black;
 
+	--background: #fcfcfc;
+	--foreground: #070707;
+
 	--gray-01: #{map.get($gray, "light", "01")};
 	--gray-02: #{map.get($gray, "light", "02")};
 	--gray-03: #{map.get($gray, "light", "03")};
@@ -49,6 +52,9 @@
 [data-theme="dark"] {
 	background: $black;
 	color: $white-text;
+
+	--background: #070707;
+	--foreground: #cccccc;
 
 	--gray-01: #{map.get($gray, "dark", "01")};
 	--gray-02: #{map.get($gray, "dark", "02")};
