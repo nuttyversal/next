@@ -16,7 +16,7 @@
 		./services/vaultwarden.nix
 
 		# Container Configuration
-		# …
+		./containers/valheim.nix
 	];
 
 	time = {
