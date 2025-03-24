@@ -14,6 +14,12 @@
 						"/data/valheim/backups:/home/steam/backups"
 					];
 
+					extraOptions = [
+						# Ensure the UID and GID of the steam user is the same as
+						# the UID and GID configured for the host directories.
+						"--userns=keep-id"
+					];
+
 					ports = [
 						"2456:2456/udp"
 						"2457:2457/udp"
