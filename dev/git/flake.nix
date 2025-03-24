@@ -37,6 +37,7 @@
 							pkgs.coreutils
 							pkgs.difftastic
 							pkgs.git
+							pkgs.gh
 						];
 					};
 				};
