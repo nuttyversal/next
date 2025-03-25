@@ -5,7 +5,7 @@
 		oci-containers = {
 			containers = {
 				valheim = {
-					image = "lloesche/valheim-server:latest";
+					image = "mbround18/valheim:latest";
 					environmentFiles = [ "/run/secrets/valheim-environment" ];
 
 					volumes = [
