@@ -53,6 +53,11 @@
 			'';
 		};
 
+		# Disable Active State Power Management.
+		# It is making the PCIe link unstable,
+		# which disconnects the network device.
+		kernelParams = [ "pcie_aspm=off" ];
+
 		kernelModules = [ "kvm-amd" ];
 		extraModulePackages = [ ];
 	};
