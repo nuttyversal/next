@@ -29,16 +29,15 @@ impl ContentRepository for PostgresContentRepository {
 		.fetch_optional(&self.pool)
 		.await?;
 
-		Ok(record.and_then(|r| {
+		record.map(|r| {
 			ContentBlock::deserialize_content(r.content)
 				.map_err(ApiError::from)
-				.ok()
 				.map(|content| ContentBlock {
 					id: r.id,
 					parent_id: r.parent_id,
 					content,
 				})
-		}))
+		}).transpose()
 	}
 
 	async fn save_content_block(
