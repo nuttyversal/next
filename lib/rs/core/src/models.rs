@@ -4,7 +4,7 @@ use uuid::Uuid;
 /// Not to be confused with [ContentBlock].
 /// `ContentBlockContent` it might have been named,
 /// but `BlockContent` is shorter and unclaimed.
-#[derive(Debug, Clone, Serialize, Deserialize )]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind")]
 pub enum BlockContent {
 	Page { title: String },
@@ -41,7 +41,9 @@ impl ContentBlock {
 	}
 
 	/// Deserialize content from a JSON value.
-	pub fn deserialize_content(content: serde_json::Value) -> Result<BlockContent, serde_json::Error> {
+	pub fn deserialize_content(
+		content: serde_json::Value,
+	) -> Result<BlockContent, serde_json::Error> {
 		serde_json::from_value(content)
 	}
 }
