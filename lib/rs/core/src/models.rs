@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use uuid::Uuid;
 
 /// Not to be confused with [ContentBlock].
@@ -46,6 +47,55 @@ impl ContentBlock {
 	) -> Result<BlockContent, serde_json::Error> {
 		serde_json::from_value(content)
 	}
+
+	/// Create a builder for a new content block.
+	pub fn builder() -> ContentBlockBuilder {
+		ContentBlockBuilder::default()
+	}
+}
+
+/// Builder for creating new content blocks.
+#[derive(Default)]
+pub struct ContentBlockBuilder {
+	id: Option<Uuid>,
+	parent_id: Option<Uuid>,
+	content: Option<BlockContent>,
+}
+
+impl ContentBlockBuilder {
+	/// Set the block's ID.
+	pub fn id(mut self, id: Uuid) -> Self {
+		self.id = Some(id);
+		self
+	}
+
+	/// Set the block's parent ID.
+	pub fn parent_id(mut self, parent_id: Option<Uuid>) -> Self {
+		self.parent_id = parent_id;
+		self
+	}
+
+	/// Set the block's content.
+	pub fn content(mut self, content: BlockContent) -> Self {
+		self.content = Some(content);
+		self
+	}
+
+	/// Build the content block, returning an error if required fields are not set.
+	pub fn try_build(self) -> Result<ContentBlock, ContentBlockError> {
+		Ok(ContentBlock {
+			id: self.id.unwrap_or_else(Uuid::now_v7),
+			parent_id: self.parent_id,
+			content: self.content.ok_or(ContentBlockError::MissingContent)?,
+		})
+	}
+}
+
+/// Errors that can occur when building a content block.
+#[derive(Debug, Error)]
+pub enum ContentBlockError {
+	#[error("Content is required")]
+	MissingContent,
 }
 
 /// A link between two blocks of content.
