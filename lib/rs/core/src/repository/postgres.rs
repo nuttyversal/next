@@ -3,15 +3,24 @@ use crate::models::ContentBlock;
 use crate::repository::traits::ContentRepository;
 use async_trait::async_trait;
 use sqlx::types::Uuid;
+use std::sync::Arc;
 
 /// A repository for content blocks that uses a PostgreSQL database as its backing store.
 pub struct PostgresContentRepository {
-	pub pool: sqlx::PgPool,
+	/// The PostgreSQL database pool.
+	pool: sqlx::PgPool,
+
+	/// A linked repository — used to connect to another repository to sync
+	/// content blocks during fetching and saving operations.
+	linked_repository: Option<Arc<dyn ContentRepository>>,
 }
 
 impl PostgresContentRepository {
 	pub fn new(pool: sqlx::PgPool) -> Self {
-		Self { pool }
+		Self {
+			pool,
+			linked_repository: None,
+		}
 	}
 }
 
@@ -29,15 +38,17 @@ impl ContentRepository for PostgresContentRepository {
 		.fetch_optional(&self.pool)
 		.await?;
 
-		record.map(|r| {
-			ContentBlock::deserialize_content(r.content)
-				.map_err(ApiError::from)
-				.map(|content| ContentBlock {
-					id: r.id,
-					parent_id: r.parent_id,
-					content,
-				})
-		}).transpose()
+		record
+			.map(|r| {
+				ContentBlock::deserialize_content(r.content)
+					.map_err(ApiError::from)
+					.map(|content| ContentBlock {
+						id: r.id,
+						parent_id: r.parent_id,
+						content,
+					})
+			})
+			.transpose()
 	}
 
 	async fn save_content_block(
@@ -79,12 +90,24 @@ impl ContentRepository for PostgresContentRepository {
 
 		Ok(())
 	}
+
+	async fn link_repository(
+		&mut self,
+		linked_repository: Arc<dyn ContentRepository>,
+	) -> Result<(), ApiError> {
+		self.linked_repository = Some(linked_repository);
+		Ok(())
+	}
+
+	async fn is_linked(&self) -> bool {
+		self.linked_repository.is_some()
+	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::models::BlockContent;
+	use crate::{models::BlockContent, repository::memory::MemoryContentRepository};
 	use sqlx::PgPool;
 
 	async fn connect_to_test_database() -> PgPool {
@@ -164,5 +187,21 @@ mod tests {
 
 		// Assert: The content block no longer exists.
 		assert!(retrieved_block.is_none());
+	}
+
+	#[tokio::test]
+	async fn test_repository_linking() {
+		// Arrange: Create a repository.
+		let database_pool = connect_to_test_database().await;
+		let mut repository = PostgresContentRepository::new(database_pool);
+
+		// Arrange: Create another repository.
+		let another_repository = Arc::new(MemoryContentRepository::new());
+
+		// Act: Link the repositories.
+		repository
+			.link_repository(another_repository.clone())
+			.await
+			.expect("Failed to link repositories");
 	}
 }
