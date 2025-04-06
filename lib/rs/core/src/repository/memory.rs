@@ -36,37 +36,52 @@ impl Default for MemoryContentRepository {
 #[async_trait]
 impl ContentRepository for MemoryContentRepository {
 	async fn get_content_block(&self, id: Uuid) -> Result<Option<ContentBlock>, ApiError> {
+		// Try to find the content block in memory.
 		let blocks = self.blocks.read().await;
-		Ok(blocks.get(&id).cloned())
+		if let Some(block) = blocks.get(&id) {
+			return Ok(Some(block.clone()));
+		}
+
+		// Try to find the content block in the linked repository.
+		match &*self.linked_repository.read().await {
+			Some(linked_repository) => linked_repository.get_content_block(id).await,
+			None => Ok(None),
+		}
 	}
 
 	async fn save_content_block(
 		&self,
 		content_block: ContentBlock,
 	) -> Result<ContentBlock, ApiError> {
+		// Save the content block to memory.
 		let mut blocks = self.blocks.write().await;
 		blocks.insert(content_block.id, content_block.clone());
-		Ok(content_block)
+
+		// Sync content block to the linked repository.
+		match &*self.linked_repository.read().await {
+			Some(linked_repository) => linked_repository.save_content_block(content_block).await,
+			None => Ok(content_block),
+		}
 	}
 
 	async fn delete_content_block(&self, id: Uuid) -> Result<(), ApiError> {
+		// Delete the content block from memory.
 		let mut blocks = self.blocks.write().await;
 		blocks.remove(&id);
-		Ok(())
+
+		// Delete the content block from the linked repository.
+		match &*self.linked_repository.read().await {
+			Some(linked_repository) => linked_repository.delete_content_block(id).await,
+			None => Ok(()),
+		}
 	}
 
 	async fn link_repository(
 		&mut self,
 		linked_repository: Arc<dyn ContentRepository>,
 	) -> Result<(), ApiError> {
-		let mut linked = self.linked_repository.write().await;
-		*linked = Some(linked_repository);
+		*self.linked_repository.write().await = Some(linked_repository);
 		Ok(())
-	}
-
-	async fn is_linked(&self) -> bool {
-		let linked = self.linked_repository.read().await;
-		linked.is_some()
 	}
 }
 
@@ -142,18 +157,91 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn test_repository_linking() {
-		// Arrange: Create two memory repositories.
-		let mut repository = MemoryContentRepository::new();
-		let another_repository = Arc::new(MemoryContentRepository::new());
+	async fn test_linked_repository_operations() {
+		// Arrange: Create repositories.
+		let mut primary_repo = MemoryContentRepository::new();
+		let secondary_repo = Arc::new(MemoryContentRepository::new());
 
 		// Act: Link the repositories.
-		repository
-			.link_repository(another_repository.clone())
+		primary_repo
+			.link_repository(secondary_repo.clone())
 			.await
 			.expect("Failed to link repositories");
 
-		// Assert: The repositories are linked.
-		assert!(repository.is_linked().await);
+		// Arrange: Create a test content block.
+		let test_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Linked Test Page".to_string(),
+			},
+		);
+
+		// Act: Save to primary repository, which should also sync to secondary.
+		primary_repo
+			.save_content_block(test_block.clone())
+			.await
+			.expect("Failed to save content block");
+
+		// Assert: Block exists in both repositories.
+		let primary_block = primary_repo
+			.get_content_block(test_block.id)
+			.await
+			.expect("Failed to get from primary repository")
+			.expect("Block not found in primary repository");
+
+		let secondary_block = secondary_repo
+			.get_content_block(test_block.id)
+			.await
+			.expect("Failed to get from secondary repository")
+			.expect("Block not found in secondary repository");
+
+		assert_eq!(primary_block.id, secondary_block.id);
+		assert_eq!(primary_block.parent_id, secondary_block.parent_id);
+		assert!(matches!(
+			primary_block.content,
+			BlockContent::Page { title } if title == "Linked Test Page"
+		));
+
+		// Act: Update in primary repository.
+		let updated_block = ContentBlock::new(
+			test_block.id,
+			test_block.parent_id,
+			BlockContent::Page {
+				title: "Updated Linked Page".to_string(),
+			},
+		);
+
+		primary_repo
+			.save_content_block(updated_block)
+			.await
+			.expect("Failed to update in primary repository");
+
+		// Assert: Update synced to secondary repository.
+		let secondary_block = secondary_repo
+			.get_content_block(test_block.id)
+			.await
+			.expect("Failed to get from secondary repository")
+			.expect("Block not found in secondary repository");
+
+		// Assert: The content block was updated in the secondary repository.
+		assert!(matches!(
+			secondary_block.content,
+			BlockContent::Page { title } if title == "Updated Linked Page"
+		));
+
+		// Act: Delete from primary repository.
+		primary_repo
+			.delete_content_block(test_block.id)
+			.await
+			.expect("Failed to delete from primary repository");
+
+		// Assert: Deletion synced to secondary repository.
+		let secondary_block = secondary_repo
+			.get_content_block(test_block.id)
+			.await
+			.expect("Failed to get from secondary repository");
+
+		// Assert: The content block no longer exists in the secondary repository.
+		assert!(secondary_block.is_none());
 	}
 }
