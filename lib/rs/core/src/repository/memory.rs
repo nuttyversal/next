@@ -27,7 +27,11 @@ struct RepositoryState {
 
 	/// Maps each block ID to the content links where it is the source.
 	/// This is used to quickly look up all the links for a given block.
-	block_links: HashMap<Uuid, HashSet<Uuid>>,
+	source_block_links: HashMap<Uuid, HashSet<Uuid>>,
+
+	/// Maps each block ID to the content links where it is the target.
+	/// This is used to quickly look up all the links for a given block.
+	target_block_links: HashMap<Uuid, HashSet<Uuid>>,
 }
 
 impl MemoryContentRepository {
@@ -37,7 +41,8 @@ impl MemoryContentRepository {
 			state: RwLock::new(RepositoryState {
 				blocks: HashMap::new(),
 				links: HashMap::new(),
-				block_links: HashMap::new(),
+				source_block_links: HashMap::new(),
+				target_block_links: HashMap::new(),
 			}),
 
 			linked_repository: RwLock::new(None),
@@ -99,6 +104,91 @@ impl ContentRepository for MemoryContentRepository {
 		}
 	}
 
+	async fn get_content_link(&self, id: Uuid) -> Result<Option<ContentLink>, ApiError> {
+		let state = self.state.read().await;
+
+		// Try to find the content link in memory.
+		if let Some(link) = state.links.get(&id) {
+			return Ok(Some(*link));
+		}
+
+		// Try to find the content link in the linked repository.
+		match &*self.linked_repository.read().await {
+			Some(linked_repository) => linked_repository.get_content_link(id).await,
+			None => Ok(None),
+		}
+	}
+
+	async fn get_content_links_from(&self, id: Uuid) -> Result<Vec<ContentLink>, ApiError> {
+		let state = self.state.read().await;
+
+		// Get all link IDs for this source block.
+		let link_ids = state
+			.source_block_links
+			.get(&id)
+			.map(|targets| targets.iter().copied().collect::<Vec<_>>())
+			.unwrap_or_default();
+
+		// Get all links from memory.
+		let mut links = std::collections::HashMap::new();
+
+		for link_id in link_ids.iter() {
+			if let Some(link) = state.links.get(link_id) {
+				links.insert(link.id, *link);
+			}
+		}
+
+		// Try to get additional links from the linked repository.
+		match &*self.linked_repository.read().await {
+			Some(linked_repository) => {
+				let linked_links = linked_repository.get_content_links_from(id).await?;
+
+				for link in linked_links {
+					links.insert(link.id, link);
+				}
+
+				Ok(links.into_values().collect())
+			}
+
+			None => Ok(links.into_values().collect()),
+		}
+	}
+
+	async fn get_content_links_to(&self, id: Uuid) -> Result<Vec<ContentLink>, ApiError> {
+		let state = self.state.read().await;
+
+		// Get all link IDs for this target block.
+		let link_ids = state
+			.target_block_links
+			.get(&id)
+			.map(|sources| sources.iter().copied().collect::<Vec<_>>())
+			.unwrap_or_default();
+
+		// Get all links from memory.
+		let mut links = std::collections::HashMap::new();
+
+		for link_id in link_ids.iter() {
+			if let Some(link) = state.links.get(link_id) {
+				links.insert(link.id, *link);
+			}
+		}
+
+		// Try to get additional links from the linked repository.
+		match &*self.linked_repository.read().await {
+			Some(linked_repository) => {
+				let linked_links = linked_repository.get_content_links_to(id).await?;
+
+				for link in linked_links {
+					links.insert(link.id, link);
+				}
+
+				Ok(links.into_values().collect())
+			}
+
+			None => Ok(links.into_values().collect()),
+		}
+	}
+
 	async fn save_content_link(&self, link: ContentLink) -> Result<(), ApiError> {
 		{
 			let mut state = self.state.write().await;
@@ -108,10 +198,16 @@ impl ContentRepository for MemoryContentRepository {
 
 			// Update the block links.
 			state
-				.block_links
+				.source_block_links
 				.entry(link.source_id)
 				.or_insert_with(HashSet::new)
-				.insert(link.target_id);
+				.insert(link.id);
+
+			state
+				.target_block_links
+				.entry(link.target_id)
+				.or_insert_with(HashSet::new)
+				.insert(link.id);
 		}
 
 		// Sync content link to the linked repository.
@@ -129,10 +225,17 @@ impl ContentRepository for MemoryContentRepository {
 			state.links.remove(&link.id);
 
 			// Update the block links.
-			if let Some(targets) = state.block_links.get_mut(&link.source_id) {
-				targets.remove(&link.target_id);
-				if targets.is_empty() {
-					state.block_links.remove(&link.source_id);
+			if let Some(links) = state.source_block_links.get_mut(&link.source_id) {
+				links.remove(&link.id);
+				if links.is_empty() {
+					state.source_block_links.remove(&link.source_id);
+				}
+			}
+
+			if let Some(links) = state.target_block_links.get_mut(&link.target_id) {
+				links.remove(&link.id);
+				if links.is_empty() {
+					state.target_block_links.remove(&link.target_id);
 				}
 			}
 		}
@@ -147,10 +250,32 @@ impl ContentRepository for MemoryContentRepository {
 	async fn are_blocks_linked(&self, source_id: Uuid, target_id: Uuid) -> Result<bool, ApiError> {
 		let state = self.state.read().await;
 
-		Ok(state
-			.block_links
+		// Check if there's a link from source to target in memory
+		let has_link = state
+			.source_block_links
 			.get(&source_id)
-			.map_or(false, |targets| targets.contains(&target_id)))
+			.map_or(false, |link_ids| {
+				link_ids.iter().any(|link_id| {
+					state
+						.links
+						.get(link_id)
+						.map_or(false, |link| link.target_id == target_id)
+				})
+			});
+
+		if has_link {
+			return Ok(true);
+		}
+
+		// Check the linked repository if no link was found
+		match &*self.linked_repository.read().await {
+			Some(linked_repository) => {
+				linked_repository
+					.are_blocks_linked(source_id, target_id)
+					.await
+			}
+			None => Ok(false),
+		}
 	}
 
 	async fn link_repository(
@@ -465,5 +590,203 @@ mod tests {
 				.await
 				.expect("Failed to check link in secondary repository")
 		);
+	}
+
+	#[tokio::test]
+	async fn test_content_link_query_operations() {
+		// Arrange: Create a memory repository.
+		let repo = MemoryContentRepository::new();
+
+		// Arrange: Create test content blocks.
+		let source_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Source Page".to_string(),
+			},
+		);
+
+		let target_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Target Page".to_string(),
+			},
+		);
+
+		// Act: Save the content blocks.
+		repo
+			.save_content_block(source_block.clone())
+			.await
+			.expect("Failed to save source block");
+
+		repo
+			.save_content_block(target_block.clone())
+			.await
+			.expect("Failed to save target block");
+
+		// Act: Create a content link between the blocks.
+		let link = ContentLink::now(source_block.id, target_block.id);
+
+		repo
+			.save_content_link(link)
+			.await
+			.expect("Failed to create content link");
+
+		// Act: Get the content link by ID.
+		let retrieved_link = repo
+			.get_content_link(link.id)
+			.await
+			.expect("Failed to get content link")
+			.expect("Content link not found");
+
+		// Assert: The retrieved link matches the original.
+		assert_eq!(retrieved_link.id, link.id);
+		assert_eq!(retrieved_link.source_id, source_block.id);
+		assert_eq!(retrieved_link.target_id, target_block.id);
+
+		// Act: Get all links from the source block.
+		let links_from = repo
+			.get_content_links_from(source_block.id)
+			.await
+			.expect("Failed to get links from source block");
+
+		// Assert: The links from source block match the original.
+		assert_eq!(links_from.len(), 1);
+		assert_eq!(links_from[0].id, link.id);
+		assert_eq!(links_from[0].source_id, source_block.id);
+		assert_eq!(links_from[0].target_id, target_block.id);
+
+		// Act: Get all links to the target block.
+		let links_to = repo
+			.get_content_links_to(target_block.id)
+			.await
+			.expect("Failed to get links to target block");
+
+		// Assert: The links to target block match the original.
+		assert_eq!(links_to.len(), 1);
+		assert_eq!(links_to[0].id, link.id);
+		assert_eq!(links_to[0].source_id, source_block.id);
+		assert_eq!(links_to[0].target_id, target_block.id);
+
+		// Act: Try to get a non-existent link.
+		let non_existent_link = repo
+			.get_content_link(Uuid::now_v7())
+			.await
+			.expect("Failed to check non-existent link");
+
+		// Assert: No link is found.
+		assert!(non_existent_link.is_none());
+
+		// Act: Try to get links from a non-existent source.
+		let no_links_from = repo
+			.get_content_links_from(Uuid::now_v7())
+			.await
+			.expect("Failed to get links from non-existent source");
+
+		// Assert: No links are found.
+		assert!(no_links_from.is_empty());
+
+		// Act: Try to get links to a non-existent target.
+		let no_links_to = repo
+			.get_content_links_to(Uuid::now_v7())
+			.await
+			.expect("Failed to get links to non-existent target");
+
+		// Assert: No links are found.
+		assert!(no_links_to.is_empty());
+	}
+
+	#[tokio::test]
+	async fn test_linked_repository_content_link_queries() {
+		// Arrange: Create repositories.
+		let mut primary_repo = MemoryContentRepository::new();
+		let secondary_repo = Arc::new(MemoryContentRepository::new());
+
+		// Act: Link the repositories.
+		primary_repo
+			.link_repository(secondary_repo.clone())
+			.await
+			.expect("Failed to link repositories");
+
+		// Arrange: Create test content blocks.
+		let source_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Source Page".to_string(),
+			},
+		);
+
+		let target_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Target Page".to_string(),
+			},
+		);
+
+		// Act: Save the content blocks.
+		primary_repo
+			.save_content_block(source_block.clone())
+			.await
+			.expect("Failed to save source block");
+
+		primary_repo
+			.save_content_block(target_block.clone())
+			.await
+			.expect("Failed to save target block");
+
+		// Act: Create a content link in primary repository.
+		let link = ContentLink::now(source_block.id, target_block.id);
+
+		primary_repo
+			.save_content_link(link)
+			.await
+			.expect("Failed to create content link");
+
+		// Act: Get the link from both repositories.
+		let primary_link = primary_repo
+			.get_content_link(link.id)
+			.await
+			.expect("Failed to get link from primary repository")
+			.expect("Link not found in primary repository");
+
+		let secondary_link = secondary_repo
+			.get_content_link(link.id)
+			.await
+			.expect("Failed to get link from secondary repository")
+			.expect("Link not found in secondary repository");
+
+		// Assert: The links match in both repositories.
+		assert_eq!(primary_link.id, secondary_link.id);
+		assert_eq!(primary_link.source_id, secondary_link.source_id);
+		assert_eq!(primary_link.target_id, secondary_link.target_id);
+
+		// Act: Get all links from source block in both repositories.
+		let primary_links_from = primary_repo
+			.get_content_links_from(source_block.id)
+			.await
+			.expect("Failed to get links from primary repository");
+
+		let secondary_links_from = secondary_repo
+			.get_content_links_from(source_block.id)
+			.await
+			.expect("Failed to get links from secondary repository");
+
+		// Assert: The links from source block match in both repositories.
+		assert_eq!(primary_links_from.len(), secondary_links_from.len());
+		assert_eq!(primary_links_from[0].id, secondary_links_from[0].id);
+
+		// Act: Get all links to target block in both repositories.
+		let primary_links_to = primary_repo
+			.get_content_links_to(target_block.id)
+			.await
+			.expect("Failed to get links to primary repository");
+
+		let secondary_links_to = secondary_repo
+			.get_content_links_to(target_block.id)
+			.await
+			.expect("Failed to get links to secondary repository");
+
+		// Assert: The links to target block match in both repositories.
+		assert_eq!(primary_links_to.len(), secondary_links_to.len());
+		assert_eq!(primary_links_to[0].id, secondary_links_to[0].id);
 	}
 }

@@ -107,6 +107,117 @@ impl ContentRepository for PostgresContentRepository {
 		}
 	}
 
+	async fn get_content_link(&self, id: Uuid) -> Result<Option<ContentLink>, ApiError> {
+		// Try to find the content link in the database.
+		let record = sqlx::query!(
+			r#"
+				SELECT id, source_id, target_id
+				FROM links
+				WHERE id = $1
+			"#,
+			id
+		)
+		.fetch_optional(&self.pool)
+		.await?;
+
+		match (record, &*self.linked_repository.read().await) {
+			// Found the content link in the database!
+			(Some(record), _) => Ok(Some(ContentLink {
+				id: record.id,
+				source_id: record.source_id,
+				target_id: record.target_id,
+			})),
+
+			// Try to find the content link in the linked repository.
+			(_, Some(linked_repository)) => linked_repository.get_content_link(id).await,
+
+			// Cannot find the content link anywhere.
+			(_, None) => Ok(None),
+		}
+	}
+
+	async fn get_content_links_from(&self, id: Uuid) -> Result<Vec<ContentLink>, ApiError> {
+		// Get all links from this source block from the database.
+		let mut links = std::collections::HashMap::new();
+
+		let records = sqlx::query!(
+			r#"
+				SELECT id, source_id, target_id
+				FROM links
+				WHERE source_id = $1
+			"#,
+			id
+		)
+		.fetch_all(&self.pool)
+		.await?;
+
+		for record in records {
+			let link = ContentLink {
+				id: record.id,
+				source_id: record.source_id,
+				target_id: record.target_id,
+			};
+
+			links.insert(link.id, link);
+		}
+
+		// Try to get additional links from the linked repository.
+		match &*self.linked_repository.read().await {
+			Some(linked_repository) => {
+				let linked_links = linked_repository.get_content_links_from(id).await?;
+
+				for link in linked_links {
+					links.insert(link.id, link);
+				}
+
+				Ok(links.into_values().collect())
+			}
+
+			None => Ok(links.into_values().collect()),
+		}
+	}
+
+	async fn get_content_links_to(&self, id: Uuid) -> Result<Vec<ContentLink>, ApiError> {
+		// Get all links to this target block from the database.
+		let mut links = std::collections::HashMap::new();
+
+		let records = sqlx::query!(
+			r#"
+				SELECT id, source_id, target_id
+				FROM links
+				WHERE target_id = $1
+			"#,
+			id
+		)
+		.fetch_all(&self.pool)
+		.await?;
+
+		for record in records {
+			let link = ContentLink {
+				id: record.id,
+				source_id: record.source_id,
+				target_id: record.target_id,
+			};
+
+			links.insert(link.id, link);
+		}
+
+		// Try to get additional links from the linked repository.
+		match &*self.linked_repository.read().await {
+			Some(linked_repository) => {
+				let linked_links = linked_repository.get_content_links_to(id).await?;
+
+				for link in linked_links {
+					links.insert(link.id, link);
+				}
+
+				Ok(links.into_values().collect())
+			}
+
+			None => Ok(links.into_values().collect()),
+		}
+	}
+
 	async fn save_content_link(&self, link: ContentLink) -> Result<(), ApiError> {
 		// Save the content link to the database.
 		sqlx::query!(
@@ -145,7 +256,6 @@ impl ContentRepository for PostgresContentRepository {
 		// Sync the deletion to the linked repository.
 		match &*self.linked_repository.read().await {
 			Some(linked_repository) => linked_repository.delete_content_link(link).await,
-
 			None => Ok(()),
 		}
 	}
@@ -494,5 +604,205 @@ mod tests {
 				.await
 				.expect("Failed to check link in memory")
 		);
+	}
+
+	#[tokio::test]
+	async fn test_content_link_query_operations() {
+		// Arrange: Connect to the database.
+		let database_pool = connect_to_test_database().await;
+		let repository = PostgresContentRepository::new(database_pool);
+
+		// Arrange: Create test content blocks.
+		let source_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Source Page".to_string(),
+			},
+		);
+
+		let target_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Target Page".to_string(),
+			},
+		);
+
+		// Act: Save the content blocks.
+		repository
+			.save_content_block(source_block.clone())
+			.await
+			.expect("Failed to save source block");
+
+		repository
+			.save_content_block(target_block.clone())
+			.await
+			.expect("Failed to save target block");
+
+		// Act: Create a content link between the blocks.
+		let link = ContentLink::now(source_block.id, target_block.id);
+
+		repository
+			.save_content_link(link)
+			.await
+			.expect("Failed to create content link");
+
+		// Act: Get the content link by ID.
+		let retrieved_link = repository
+			.get_content_link(link.id)
+			.await
+			.expect("Failed to get content link")
+			.expect("Content link not found");
+
+		// Assert: The retrieved link matches the original.
+		assert_eq!(retrieved_link.id, link.id);
+		assert_eq!(retrieved_link.source_id, source_block.id);
+		assert_eq!(retrieved_link.target_id, target_block.id);
+
+		// Act: Get all links from the source block.
+		let links_from = repository
+			.get_content_links_from(source_block.id)
+			.await
+			.expect("Failed to get links from source block");
+
+		// Assert: The links from source block match the original.
+		assert_eq!(links_from.len(), 1);
+		assert_eq!(links_from[0].id, link.id);
+		assert_eq!(links_from[0].source_id, source_block.id);
+		assert_eq!(links_from[0].target_id, target_block.id);
+
+		// Act: Get all links to the target block.
+		let links_to = repository
+			.get_content_links_to(target_block.id)
+			.await
+			.expect("Failed to get links to target block");
+
+		// Assert: The links to target block match the original.
+		assert_eq!(links_to.len(), 1);
+		assert_eq!(links_to[0].id, link.id);
+		assert_eq!(links_to[0].source_id, source_block.id);
+		assert_eq!(links_to[0].target_id, target_block.id);
+
+		// Act: Try to get a non-existent link.
+		let non_existent_link = repository
+			.get_content_link(Uuid::now_v7())
+			.await
+			.expect("Failed to check non-existent link");
+
+		// Assert: No link is found.
+		assert!(non_existent_link.is_none());
+
+		// Act: Try to get links from a non-existent source.
+		let no_links_from = repository
+			.get_content_links_from(Uuid::now_v7())
+			.await
+			.expect("Failed to get links from non-existent source");
+
+		// Assert: No links are found.
+		assert!(no_links_from.is_empty());
+
+		// Act: Try to get links to a non-existent target.
+		let no_links_to = repository
+			.get_content_links_to(Uuid::now_v7())
+			.await
+			.expect("Failed to get links to non-existent target");
+
+		// Assert: No links are found.
+		assert!(no_links_to.is_empty());
+	}
+
+	#[tokio::test]
+	async fn test_linked_repository_content_link_queries() {
+		// Arrange: Create repositories.
+		let database_pool = connect_to_test_database().await;
+		let mut postgres_repo = PostgresContentRepository::new(database_pool);
+		let memory_repo = Arc::new(MemoryContentRepository::new());
+
+		// Act: Link the repositories.
+		postgres_repo
+			.link_repository(memory_repo.clone())
+			.await
+			.expect("Failed to link repositories");
+
+		// Arrange: Create test content blocks.
+		let source_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Source Page".to_string(),
+			},
+		);
+
+		let target_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Target Page".to_string(),
+			},
+		);
+
+		// Act: Save the content blocks.
+		postgres_repo
+			.save_content_block(source_block.clone())
+			.await
+			.expect("Failed to save source block");
+
+		postgres_repo
+			.save_content_block(target_block.clone())
+			.await
+			.expect("Failed to save target block");
+
+		// Act: Create a content link in PostgreSQL.
+		let link = ContentLink::now(source_block.id, target_block.id);
+
+		postgres_repo
+			.save_content_link(link)
+			.await
+			.expect("Failed to create content link");
+
+		// Act: Get the link from both repositories.
+		let postgres_link = postgres_repo
+			.get_content_link(link.id)
+			.await
+			.expect("Failed to get link from PostgreSQL")
+			.expect("Link not found in PostgreSQL");
+
+		let memory_link = memory_repo
+			.get_content_link(link.id)
+			.await
+			.expect("Failed to get link from memory")
+			.expect("Link not found in memory");
+
+		// Assert: The links match in both repositories.
+		assert_eq!(postgres_link.id, memory_link.id);
+		assert_eq!(postgres_link.source_id, memory_link.source_id);
+		assert_eq!(postgres_link.target_id, memory_link.target_id);
+
+		// Act: Get all links from source block in both repositories.
+		let postgres_links_from = postgres_repo
+			.get_content_links_from(source_block.id)
+			.await
+			.expect("Failed to get links from PostgreSQL");
+
+		let memory_links_from = memory_repo
+			.get_content_links_from(source_block.id)
+			.await
+			.expect("Failed to get links from memory");
+
+		// Assert: The links from source block match in both repositories.
+		assert_eq!(postgres_links_from.len(), memory_links_from.len());
+		assert_eq!(postgres_links_from[0].id, memory_links_from[0].id);
+
+		// Act: Get all links to target block in both repositories.
+		let postgres_links_to = postgres_repo
+			.get_content_links_to(target_block.id)
+			.await
+			.expect("Failed to get links to PostgreSQL");
+
+		let memory_links_to = memory_repo
+			.get_content_links_to(target_block.id)
+			.await
+			.expect("Failed to get links to memory");
+
+		// Assert: The links to target block match in both repositories.
+		assert_eq!(postgres_links_to.len(), memory_links_to.len());
+		assert_eq!(postgres_links_to[0].id, memory_links_to[0].id);
 	}
 }
