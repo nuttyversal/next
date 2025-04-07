@@ -1,5 +1,5 @@
 use crate::errors::ApiError;
-use crate::models::ContentBlock;
+use crate::models::{ContentBlock, ContentLink};
 use crate::repository::traits::ContentRepository;
 use async_trait::async_trait;
 use sqlx::types::Uuid;
@@ -12,7 +12,7 @@ pub struct PostgresContentRepository {
 	pool: sqlx::PgPool,
 
 	/// A linked repository — used to connect to another repository to sync
-	/// content blocks during fetching and saving operations.
+	/// content blocks & links during fetching and saving operations.
 	linked_repository: RwLock<Option<Arc<dyn ContentRepository>>>,
 }
 
@@ -113,6 +113,49 @@ impl ContentRepository for PostgresContentRepository {
 	) -> Result<(), ApiError> {
 		*self.linked_repository.write().await = Some(linked_repository);
 		Ok(())
+	}
+
+	async fn save_content_link(&self, link: ContentLink) -> Result<(), ApiError> {
+		// Save the content link to the database.
+		sqlx::query!(
+			r#"
+				INSERT INTO links (id, source_id, target_id)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (id) DO NOTHING
+			"#,
+			link.id,
+			link.source_id,
+			link.target_id
+		)
+		.execute(&self.pool)
+		.await?;
+
+		// Sync the content link to the linked repository.
+		match &*self.linked_repository.read().await {
+			Some(linked_repository) => linked_repository.save_content_link(link).await,
+
+			None => Ok(()),
+		}
+	}
+
+	async fn delete_content_link(&self, link: ContentLink) -> Result<(), ApiError> {
+		// Delete the content link from the database.
+		sqlx::query!(
+			r#"
+				DELETE FROM links
+				WHERE id = $1
+			"#,
+			link.id
+		)
+		.execute(&self.pool)
+		.await?;
+
+		// Sync the deletion to the linked repository.
+		match &*self.linked_repository.read().await {
+			Some(linked_repository) => linked_repository.delete_content_link(link).await,
+
+			None => Ok(()),
+		}
 	}
 }
 
@@ -287,5 +330,176 @@ mod tests {
 			.expect("Failed to get from memory");
 
 		assert!(memory_block.is_none());
+	}
+
+	#[tokio::test]
+	async fn test_content_link_operations() {
+		// Arrange: Connect to the database.
+		let database_pool = connect_to_test_database().await;
+		let repository = PostgresContentRepository::new(database_pool);
+
+		// Arrange: Create test content blocks.
+		let source_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Source Page".to_string(),
+			},
+		);
+
+		let target_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Target Page".to_string(),
+			},
+		);
+
+		// Act: Save the content blocks.
+		repository
+			.save_content_block(source_block.clone())
+			.await
+			.expect("Failed to save source block");
+
+		repository
+			.save_content_block(target_block.clone())
+			.await
+			.expect("Failed to save target block");
+
+		// Act: Create a content link between the blocks.
+		let link = ContentLink::now(source_block.id, target_block.id);
+
+		repository
+			.save_content_link(link)
+			.await
+			.expect("Failed to create content link");
+
+		// Assert: The link exists in the database with an ID.
+		let record = sqlx::query!(
+			r#"
+				SELECT id, source_id, target_id
+				FROM links
+				WHERE id = $1
+			"#,
+			link.id
+		)
+		.fetch_one(&repository.pool)
+		.await
+		.expect("Failed to fetch link");
+
+		assert_eq!(record.source_id, link.source_id);
+		assert_eq!(record.target_id, link.target_id);
+
+		// Act: Delete the link.
+		repository
+			.delete_content_link(link)
+			.await
+			.expect("Failed to delete content link");
+
+		// Assert: The link no longer exists in the database.
+		let link_exists = sqlx::query!(
+			r#"
+				SELECT EXISTS (
+					SELECT 1 FROM links
+					WHERE source_id = $1 AND target_id = $2
+				) as "exists!"
+			"#,
+			source_block.id,
+			target_block.id
+		)
+		.fetch_one(&repository.pool)
+		.await
+		.expect("Failed to check link existence")
+		.exists;
+
+		assert!(!link_exists);
+	}
+
+	#[tokio::test]
+	async fn test_linked_repository_content_links() {
+		// Arrange: Create repositories.
+		let database_pool = connect_to_test_database().await;
+		let mut postgres_repo = PostgresContentRepository::new(database_pool);
+		let memory_repo = Arc::new(MemoryContentRepository::new());
+
+		// Act: Link the repositories.
+		postgres_repo
+			.link_repository(memory_repo.clone())
+			.await
+			.expect("Failed to link repositories");
+
+		// Arrange: Create test content blocks.
+		let source_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Source Page".to_string(),
+			},
+		);
+
+		let target_block = ContentBlock::now(
+			None,
+			BlockContent::Page {
+				title: "Target Page".to_string(),
+			},
+		);
+
+		// Act: Save the content blocks.
+		postgres_repo
+			.save_content_block(source_block.clone())
+			.await
+			.expect("Failed to save source block");
+
+		postgres_repo
+			.save_content_block(target_block.clone())
+			.await
+			.expect("Failed to save target block");
+
+		// Act: Create a content link in PostgreSQL, which should also sync to memory.
+		let link = ContentLink::now(source_block.id, target_block.id);
+
+		postgres_repo
+			.save_content_link(link)
+			.await
+			.expect("Failed to create content link");
+
+		// Assert: The link exists in both repositories.
+		let postgres_link = sqlx::query!(
+			r#"
+				SELECT EXISTS (
+					SELECT 1 FROM links
+					WHERE source_id = $1 AND target_id = $2
+				) as "exists!"
+			"#,
+			source_block.id,
+			target_block.id
+		)
+		.fetch_one(&postgres_repo.pool)
+		.await
+		.expect("Failed to check link existence in PostgreSQL")
+		.exists;
+
+		assert!(postgres_link);
+
+		// Act: Delete the link from PostgreSQL, which should also sync to memory.
+		postgres_repo
+			.delete_content_link(link)
+			.await
+			.expect("Failed to delete content link");
+
+		// Assert: The link no longer exists in either repository.
+		let postgres_link = sqlx::query!(
+			r#"
+				SELECT EXISTS (
+					SELECT 1 FROM links
+					WHERE source_id = $1 AND target_id = $2
+				) as "exists!"
+			"#,
+			source_block.id,
+			target_block.id
+		)
+		.fetch_one(&postgres_repo.pool)
+		.await
+		.expect("Failed to check link existence in PostgreSQL")
+		.exists;
+
+		assert!(!postgres_link);
 	}
 }
