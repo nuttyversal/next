@@ -107,14 +107,6 @@ impl ContentRepository for PostgresContentRepository {
 		}
 	}
 
-	async fn link_repository(
-		&mut self,
-		linked_repository: Arc<dyn ContentRepository>,
-	) -> Result<(), ApiError> {
-		*self.linked_repository.write().await = Some(linked_repository);
-		Ok(())
-	}
-
 	async fn save_content_link(&self, link: ContentLink) -> Result<(), ApiError> {
 		// Save the content link to the database.
 		sqlx::query!(
@@ -156,6 +148,31 @@ impl ContentRepository for PostgresContentRepository {
 
 			None => Ok(()),
 		}
+	}
+
+	async fn are_blocks_linked(&self, source_id: Uuid, target_id: Uuid) -> Result<bool, ApiError> {
+		let record = sqlx::query!(
+			r#"
+				SELECT EXISTS (
+					SELECT 1 FROM links
+					WHERE source_id = $1 AND target_id = $2
+				) as "exists!"
+			"#,
+			source_id,
+			target_id
+		)
+		.fetch_one(&self.pool)
+		.await?;
+
+		Ok(record.exists)
+	}
+
+	async fn link_repository(
+		&mut self,
+		linked_repository: Arc<dyn ContentRepository>,
+	) -> Result<(), ApiError> {
+		*self.linked_repository.write().await = Some(linked_repository);
+		Ok(())
 	}
 }
 
@@ -372,21 +389,13 @@ mod tests {
 			.await
 			.expect("Failed to create content link");
 
-		// Assert: The link exists in the database with an ID.
-		let record = sqlx::query!(
-			r#"
-				SELECT id, source_id, target_id
-				FROM links
-				WHERE id = $1
-			"#,
-			link.id
-		)
-		.fetch_one(&repository.pool)
-		.await
-		.expect("Failed to fetch link");
-
-		assert_eq!(record.source_id, link.source_id);
-		assert_eq!(record.target_id, link.target_id);
+		// Assert: The blocks are linked.
+		assert!(
+			repository
+				.are_blocks_linked(source_block.id, target_block.id)
+				.await
+				.expect("Failed to check link")
+		);
 
 		// Act: Delete the link.
 		repository
@@ -394,23 +403,13 @@ mod tests {
 			.await
 			.expect("Failed to delete content link");
 
-		// Assert: The link no longer exists in the database.
-		let link_exists = sqlx::query!(
-			r#"
-				SELECT EXISTS (
-					SELECT 1 FROM links
-					WHERE source_id = $1 AND target_id = $2
-				) as "exists!"
-			"#,
-			source_block.id,
-			target_block.id
-		)
-		.fetch_one(&repository.pool)
-		.await
-		.expect("Failed to check link existence")
-		.exists;
-
-		assert!(!link_exists);
+		// Assert: The blocks are no longer linked.
+		assert!(
+			!repository
+				.are_blocks_linked(source_block.id, target_block.id)
+				.await
+				.expect("Failed to check link")
+		);
 	}
 
 	#[tokio::test]
@@ -460,23 +459,20 @@ mod tests {
 			.await
 			.expect("Failed to create content link");
 
-		// Assert: The link exists in both repositories.
-		let postgres_link = sqlx::query!(
-			r#"
-				SELECT EXISTS (
-					SELECT 1 FROM links
-					WHERE source_id = $1 AND target_id = $2
-				) as "exists!"
-			"#,
-			source_block.id,
-			target_block.id
-		)
-		.fetch_one(&postgres_repo.pool)
-		.await
-		.expect("Failed to check link existence in PostgreSQL")
-		.exists;
+		// Assert: The blocks are linked in both repositories.
+		assert!(
+			postgres_repo
+				.are_blocks_linked(source_block.id, target_block.id)
+				.await
+				.expect("Failed to check link in PostgreSQL")
+		);
 
-		assert!(postgres_link);
+		assert!(
+			memory_repo
+				.are_blocks_linked(source_block.id, target_block.id)
+				.await
+				.expect("Failed to check link in memory")
+		);
 
 		// Act: Delete the link from PostgreSQL, which should also sync to memory.
 		postgres_repo
@@ -484,22 +480,19 @@ mod tests {
 			.await
 			.expect("Failed to delete content link");
 
-		// Assert: The link no longer exists in either repository.
-		let postgres_link = sqlx::query!(
-			r#"
-				SELECT EXISTS (
-					SELECT 1 FROM links
-					WHERE source_id = $1 AND target_id = $2
-				) as "exists!"
-			"#,
-			source_block.id,
-			target_block.id
-		)
-		.fetch_one(&postgres_repo.pool)
-		.await
-		.expect("Failed to check link existence in PostgreSQL")
-		.exists;
+		// Assert: The blocks are no longer linked in either repository.
+		assert!(
+			!postgres_repo
+				.are_blocks_linked(source_block.id, target_block.id)
+				.await
+				.expect("Failed to check link in PostgreSQL")
+		);
 
-		assert!(!postgres_link);
+		assert!(
+			!memory_repo
+				.are_blocks_linked(source_block.id, target_block.id)
+				.await
+				.expect("Failed to check link in memory")
+		);
 	}
 }

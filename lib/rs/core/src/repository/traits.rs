@@ -28,6 +28,9 @@ pub trait ContentRepository: Send + Sync {
 	/// Delete a content link between two content blocks.
 	async fn delete_content_link(&self, link: ContentLink) -> Result<(), ApiError>;
 
+	/// Check if two blocks are linked.
+	async fn are_blocks_linked(&self, source_id: Uuid, target_id: Uuid) -> Result<bool, ApiError>;
+
 	/// Link this repository with another repository.
 	async fn link_repository(
 		&mut self,

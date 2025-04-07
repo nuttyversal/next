@@ -99,14 +99,6 @@ impl ContentRepository for MemoryContentRepository {
 		}
 	}
 
-	async fn link_repository(
-		&mut self,
-		linked_repository: Arc<dyn ContentRepository>,
-	) -> Result<(), ApiError> {
-		*self.linked_repository.write().await = Some(linked_repository);
-		Ok(())
-	}
-
 	async fn save_content_link(&self, link: ContentLink) -> Result<(), ApiError> {
 		{
 			let mut state = self.state.write().await;
@@ -150,6 +142,23 @@ impl ContentRepository for MemoryContentRepository {
 			Some(linked_repository) => linked_repository.delete_content_link(link).await,
 			None => Ok(()),
 		}
+	}
+
+	async fn are_blocks_linked(&self, source_id: Uuid, target_id: Uuid) -> Result<bool, ApiError> {
+		let state = self.state.read().await;
+
+		Ok(state
+			.block_links
+			.get(&source_id)
+			.map_or(false, |targets| targets.contains(&target_id)))
+	}
+
+	async fn link_repository(
+		&mut self,
+		linked_repository: Arc<dyn ContentRepository>,
+	) -> Result<(), ApiError> {
+		*self.linked_repository.write().await = Some(linked_repository);
+		Ok(())
 	}
 }
 
@@ -346,27 +355,19 @@ mod tests {
 
 		// Act: Create a content link between the blocks.
 		let link = ContentLink::now(source_block.id, target_block.id);
+
 		repo
 			.save_content_link(link)
 			.await
 			.expect("Failed to create content link");
 
-		{
-			// Assert: The link exists in memory.
-			let state = repo.state.read().await;
-			let stored_link = state.links.get(&link.id).expect("Link not found");
-
-			assert_eq!(stored_link.source_id, source_block.id);
-			assert_eq!(stored_link.target_id, target_block.id);
-
-			// Assert: The block links are updated.
-			assert!(
-				state
-					.block_links
-					.get(&source_block.id)
-					.is_some_and(|targets| targets.contains(&target_block.id))
-			);
-		}
+		// Assert: The blocks are linked.
+		assert!(
+			repo
+				.are_blocks_linked(source_block.id, target_block.id)
+				.await
+				.expect("Failed to check link")
+		);
 
 		// Act: Delete the link.
 		repo
@@ -374,18 +375,13 @@ mod tests {
 			.await
 			.expect("Failed to delete content link");
 
-		{
-			// Assert: The link no longer exists in memory.
-			let state = repo.state.read().await;
-
-			assert!(!state.links.contains_key(&link.id));
-			assert!(
-				!state
-					.block_links
-					.get(&source_block.id)
-					.is_some_and(|targets| targets.contains(&target_block.id))
-			);
-		}
+		// Assert: The blocks are no longer linked.
+		assert!(
+			!repo
+				.are_blocks_linked(source_block.id, target_block.id)
+				.await
+				.expect("Failed to check link")
+		);
 	}
 
 	#[tokio::test]
@@ -434,29 +430,20 @@ mod tests {
 			.await
 			.expect("Failed to create content link");
 
-		{
-			// Assert: The link exists in both repositories.
-			let primary_state = primary_repo.state.read().await;
-			let secondary_state = secondary_repo.state.read().await;
+		// Assert: The blocks are linked in both repositories.
+		assert!(
+			primary_repo
+				.are_blocks_linked(source_block.id, target_block.id)
+				.await
+				.expect("Failed to check link in primary repository")
+		);
 
-			assert!(primary_state.links.contains_key(&link.id));
-			assert!(secondary_state.links.contains_key(&link.id));
-
-			// Assert: The block links are updated in both repositories.
-			assert!(
-				primary_state
-					.block_links
-					.get(&source_block.id)
-					.is_some_and(|targets| targets.contains(&target_block.id))
-			);
-
-			assert!(
-				secondary_state
-					.block_links
-					.get(&source_block.id)
-					.is_some_and(|targets| targets.contains(&target_block.id))
-			);
-		}
+		assert!(
+			secondary_repo
+				.are_blocks_linked(source_block.id, target_block.id)
+				.await
+				.expect("Failed to check link in secondary repository")
+		);
 
 		// Act: Delete the link from primary repository.
 		primary_repo
@@ -464,28 +451,19 @@ mod tests {
 			.await
 			.expect("Failed to delete content link");
 
-		{
-			// Assert: The link no longer exists in either repository.
-			let primary_state = primary_repo.state.read().await;
-			let secondary_state = secondary_repo.state.read().await;
+		// Assert: The blocks are no longer linked in either repository.
+		assert!(
+			!primary_repo
+				.are_blocks_linked(source_block.id, target_block.id)
+				.await
+				.expect("Failed to check link in primary repository")
+		);
 
-			assert!(!primary_state.links.contains_key(&link.id));
-			assert!(!secondary_state.links.contains_key(&link.id));
-
-			// Assert: The block links are updated in both repositories.
-			assert!(
-				!primary_state
-					.block_links
-					.get(&source_block.id)
-					.is_some_and(|targets| targets.contains(&target_block.id))
-			);
-
-			assert!(
-				!secondary_state
-					.block_links
-					.get(&source_block.id)
-					.is_some_and(|targets| targets.contains(&target_block.id))
-			);
-		}
+		assert!(
+			!secondary_repo
+				.are_blocks_linked(source_block.id, target_block.id)
+				.await
+				.expect("Failed to check link in secondary repository")
+		);
 	}
 }
