@@ -4,10 +4,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use uuid::Uuid;
 
-/// A repository for content blocks.
-///
-/// If a repository is linked with another repository, it will be able to sync
-/// content blocks & links to and from the linked repository.
+/// A repository for content blocks and links.
 #[async_trait]
 pub trait ContentRepository: Send + Sync {
 	/// Get a block of content by its identifier.
@@ -43,6 +40,6 @@ pub trait ContentRepository: Send + Sync {
 	/// Link this repository with another repository.
 	async fn link_repository(
 		&mut self,
-		linked_repository: Arc<dyn ContentRepository>,
+		repository: Arc<dyn ContentRepository>,
 	) -> Result<(), ApiError>;
 }
