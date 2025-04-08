@@ -1,10 +1,11 @@
 use std::cmp::Ordering;
+use std::iter::repeat;
 use thiserror::Error;
 
 /// A fractional index for ordering content blocks.
 ///
-/// The index is stored as a base-95 string, where each character represents a digit
-/// in the range [32, 126] (printable ASCII characters). This allows us to generate
+/// The index is stored as a base-94 string, where each character represents a digit
+/// in the range [33, 126] (visible ASCII characters). This allows us to generate
 /// new indices between any two existing indices by averaging their values.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FractionalIndex(String);
@@ -20,20 +21,20 @@ pub enum FractionalIndexError {
 }
 
 impl FractionalIndex {
-	/// The minimum character value used in base-95 encoding.
-	const MIN_CHAR: u8 = 32; // Space ( )
+	/// The minimum character value used in base-94 encoding.
+	const MIN_CHAR: u8 = 33; // Exclamation mark (!)
 
-	/// The maximum character value used in base-95 encoding.
+	/// The maximum character value used in base-94 encoding.
 	const MAX_CHAR: u8 = 126; // Tilde (~)
 
 	/// The number of possible values per digit.
-	const BASE: u32 = 95;
+	const BASE: u32 = 94;
 
 	/// Creates a new fractional index from a string.
 	///
 	/// # Arguments
 	///
-	/// * `s` - The string representation of the index.
+	/// * `index` - The string representation of the index.
 	///
 	/// # Errors
 	///
@@ -50,7 +51,7 @@ impl FractionalIndex {
 
 	/// Creates a new fractional index at the start of the sequence.
 	pub fn start() -> Self {
-		Self(String::from(" "))
+		Self(String::from("!"))
 	}
 
 	/// Creates a new fractional index at the end of the sequence.
@@ -77,13 +78,24 @@ impl FractionalIndex {
 		let mut result = String::new();
 		let mut carry = 0;
 
-		// Pad the shorter string with spaces (minimum value).
+		// Pad the shorter string with minimum value characters.
+		// This makes the strings lexicographically comparable.
 		let max_len = before.0.len().max(after.0.len());
-		let before_padded = format!("{:width$}", before.0, width = max_len);
-		let after_padded = format!("{:width$}", after.0, width = max_len);
+
+		let before_padded = {
+			let mut s = before.0.clone();
+			s.extend(repeat('!').take(max_len - before.0.len()));
+			s
+		};
+
+		let after_padded = {
+			let mut s = after.0.clone();
+			s.extend(repeat('!').take(max_len - after.0.len()));
+			s
+		};
 
 		for (b, a) in before_padded.chars().zip(after_padded.chars()) {
-			// Convert the characters to their numeric values: [32, 126] ↦ [0, 94].
+			// Convert the characters to their numeric values: [33, 126] ↦ [0, 93].
 			let b_val = b as u32 - Self::MIN_CHAR as u32;
 			let a_val = a as u32 - Self::MIN_CHAR as u32;
 
@@ -92,14 +104,14 @@ impl FractionalIndex {
 			let digit = sum / 2;
 			carry = (sum % 2) * Self::BASE;
 
-			// Convert the digit back to a character: [0, 94] ↦ [32, 126].
+			// Convert the digit back to a character: [0, 93] ↦ [33, 126].
 			let c = (digit as u8 + Self::MIN_CHAR) as char;
 			result.push(c);
 		}
 
 		// If there's a carry, add an additional digit.
 		if carry > 0 {
-			// Convert the carry to a character: [0, 94] ↦ [32, 126].
+			// Convert the carry to a character: [0, 93] ↦ [33, 126].
 			let c = ((carry / 2) as u8 + Self::MIN_CHAR) as char;
 			result.push(c);
 		}
@@ -121,11 +133,21 @@ impl PartialOrd for FractionalIndex {
 
 impl Ord for FractionalIndex {
 	fn cmp(&self, other: &Self) -> Ordering {
-		// Pad the shorter string with spaces (minimum value).
+		// Pad the shorter string with minimum value characters.
 		// This makes the strings lexicographically comparable.
 		let max_len = self.0.len().max(other.0.len());
-		let self_padded = format!("{:width$}", self.0, width = max_len);
-		let other_padded = format!("{:width$}", other.0, width = max_len);
+
+		let self_padded = {
+			let mut s = self.0.clone();
+			s.extend(repeat('!').take(max_len - self.0.len()));
+			s
+		};
+
+		let other_padded = {
+			let mut s = other.0.clone();
+			s.extend(repeat('!').take(max_len - other.0.len()));
+			s
+		};
 
 		self_padded.cmp(&other_padded)
 	}
@@ -200,6 +222,9 @@ mod tests {
 		// Test non-printable ASCII.
 		assert!(FractionalIndex::new("\x00".to_string()).is_err());
 		assert!(FractionalIndex::new("\x1F".to_string()).is_err());
+
+		// Test space character.
+		assert!(FractionalIndex::new(" ".to_string()).is_err());
 
 		// Test characters outside our range.
 		assert!(FractionalIndex::new("\x7F".to_string()).is_err());
