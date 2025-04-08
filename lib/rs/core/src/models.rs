@@ -1,3 +1,4 @@
+use crate::index::FractionalIndex;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
@@ -19,21 +20,23 @@ pub struct ContentBlock {
 	pub id: Uuid,
 	pub parent_id: Option<Uuid>,
 	pub content: BlockContent,
+	pub index: FractionalIndex,
 }
 
 impl ContentBlock {
 	/// Create a new block of content.
-	pub fn new(id: Uuid, parent_id: Option<Uuid>, content: BlockContent) -> Self {
+	pub fn new(id: Uuid, parent_id: Option<Uuid>, content: BlockContent, index: FractionalIndex) -> Self {
 		Self {
 			id,
 			parent_id,
 			content,
+			index,
 		}
 	}
 
 	/// Create a new block of content with a generated identifier (UUIDv7).
-	pub fn now(parent_id: Option<Uuid>, content: BlockContent) -> Self {
-		Self::new(Uuid::now_v7(), parent_id, content)
+	pub fn now(parent_id: Option<Uuid>, content: BlockContent, index: FractionalIndex) -> Self {
+		Self::new(Uuid::now_v7(), parent_id, content, index)
 	}
 
 	/// Serialize content to a JSON value.
@@ -60,6 +63,7 @@ pub struct ContentBlockBuilder {
 	id: Option<Uuid>,
 	parent_id: Option<Uuid>,
 	content: Option<BlockContent>,
+	index: Option<FractionalIndex>,
 }
 
 impl ContentBlockBuilder {
@@ -81,12 +85,19 @@ impl ContentBlockBuilder {
 		self
 	}
 
+	/// Set the block's index.
+	pub fn index(mut self, index: FractionalIndex) -> Self {
+		self.index = Some(index);
+		self
+	}
+
 	/// Build the content block, returning an error if required fields are not set.
 	pub fn try_build(self) -> Result<ContentBlock, ContentBlockError> {
 		Ok(ContentBlock {
 			id: self.id.unwrap_or_else(Uuid::now_v7),
 			parent_id: self.parent_id,
 			content: self.content.ok_or(ContentBlockError::MissingContent)?,
+			index: self.index.ok_or(ContentBlockError::MissingIndex)?,
 		})
 	}
 }
@@ -96,6 +107,9 @@ impl ContentBlockBuilder {
 pub enum ContentBlockError {
 	#[error("Content is required")]
 	MissingContent,
+
+	#[error("Index is required")]
+	MissingIndex,
 }
 
 /// A link between two blocks of content.

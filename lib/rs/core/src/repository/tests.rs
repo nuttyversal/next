@@ -1,3 +1,4 @@
+use crate::index::FractionalIndex;
 use crate::models::{BlockContent, ContentBlock, ContentLink};
 use crate::repository::traits::ContentRepository;
 use std::sync::Arc;
@@ -35,6 +36,7 @@ where
 		BlockContent::Page {
 			title: "Test Page".to_string(),
 		},
+		FractionalIndex::start(),
 	);
 
 	// Act: Save the test content block.
@@ -67,6 +69,7 @@ where
 		BlockContent::Page {
 			title: "Updated Page".to_string(),
 		},
+		test_block.index,
 	);
 
 	let updated = repo
@@ -103,6 +106,7 @@ where
 		BlockContent::Page {
 			title: "Source Page".to_string(),
 		},
+		FractionalIndex::start(),
 	);
 
 	let target_block = ContentBlock::now(
@@ -110,6 +114,7 @@ where
 		BlockContent::Page {
 			title: "Target Page".to_string(),
 		},
+		FractionalIndex::between(&source_block.index, &FractionalIndex::end()).unwrap(),
 	);
 
 	// Act: Save the content blocks.
@@ -237,6 +242,7 @@ where
 		BlockContent::Page {
 			title: "Linked Test Page".to_string(),
 		},
+		FractionalIndex::start(),
 	);
 
 	// Act: Save to primary repository, which should also sync to secondary.
@@ -272,6 +278,7 @@ where
 		BlockContent::Page {
 			title: "Updated Linked Page".to_string(),
 		},
+		test_block.index,
 	);
 
 	primary_repo
@@ -311,6 +318,7 @@ where
 		BlockContent::Page {
 			title: "Source Page".to_string(),
 		},
+		FractionalIndex::start(),
 	);
 
 	let target_block = ContentBlock::now(
@@ -318,6 +326,7 @@ where
 		BlockContent::Page {
 			title: "Target Page".to_string(),
 		},
+		FractionalIndex::between(&source_block.index, &FractionalIndex::end()).unwrap(),
 	);
 
 	// Act: Save the content blocks.

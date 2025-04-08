@@ -7,4 +7,7 @@ pub enum ApiError {
 
 	#[error("Serialization error: {0}")]
 	Serialization(#[from] serde_json::Error),
+
+	#[error("Invalid index: {0}")]
+	InvalidIndex(String),
 }

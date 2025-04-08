@@ -1,8 +1,9 @@
 use crate::errors::ApiError;
+use crate::index::FractionalIndex;
 use crate::models::{ContentBlock, ContentLink};
 use crate::repository::traits::ContentRepository;
 use async_trait::async_trait;
-use sqlx::types::Uuid;
+use sqlx::{Row, types::Uuid};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -30,28 +31,31 @@ impl PostgresContentRepository {
 impl ContentRepository for PostgresContentRepository {
 	async fn get_content_block(&self, id: Uuid) -> Result<Option<ContentBlock>, ApiError> {
 		// Try to find the content block in the database.
-		let record = sqlx::query!(
+		let record = sqlx::query(
 			r#"
-				SELECT id, parent_id, content
+				SELECT id, parent_id, content, index
 				FROM blocks
 				WHERE id = $1
 			"#,
-			id
 		)
+		.bind(id)
 		.fetch_optional(&self.pool)
 		.await?;
 
 		match (record, &*self.linked_repository.read().await) {
 			// Found the content block in the database!
-			(Some(record), _) => ContentBlock::deserialize_content(record.content)
-				.map_err(ApiError::from)
-				.map(|content| {
-					Some(ContentBlock {
-						id: record.id,
-						parent_id: record.parent_id,
-						content,
-					})
-				}),
+			(Some(record), _) => {
+				let content = ContentBlock::deserialize_content(record.get("content"))?;
+				let index = FractionalIndex::new(record.get("index"))
+					.map_err(|e| ApiError::InvalidIndex(e.to_string()))?;
+
+				Ok(Some(ContentBlock {
+					id: record.get("id"),
+					parent_id: record.get("parent_id"),
+					content,
+					index,
+				}))
+			}
 
 			// Try to find the content block in the linked repository.
 			(_, Some(linked_repository)) => linked_repository.get_content_block(id).await,
@@ -66,18 +70,19 @@ impl ContentRepository for PostgresContentRepository {
 		content_block: ContentBlock,
 	) -> Result<ContentBlock, ApiError> {
 		// Save the content block to the database.
-		sqlx::query!(
+		sqlx::query(
 			r#"
-				INSERT INTO blocks (id, parent_id, content)
-				VALUES ($1, $2, $3)
+				INSERT INTO blocks (id, parent_id, content, index)
+				VALUES ($1, $2, $3, $4)
 				ON CONFLICT (id) DO UPDATE
-				SET parent_id = EXCLUDED.parent_id, content = EXCLUDED.content
-				RETURNING id, parent_id, content
+				SET parent_id = EXCLUDED.parent_id, content = EXCLUDED.content, index = EXCLUDED.index
+				RETURNING id, parent_id, content, index
 			"#,
-			content_block.id,
-			content_block.parent_id,
-			content_block.serialize_content()?
 		)
+		.bind(content_block.id)
+		.bind(content_block.parent_id)
+		.bind(content_block.serialize_content()?)
+		.bind(content_block.index.as_str())
 		.fetch_one(&self.pool)
 		.await?;
 
@@ -236,7 +241,6 @@ impl ContentRepository for PostgresContentRepository {
 		// Sync the content link to the linked repository.
 		match &*self.linked_repository.read().await {
 			Some(linked_repository) => linked_repository.save_content_link(link).await,
-
 			None => Ok(()),
 		}
 	}
