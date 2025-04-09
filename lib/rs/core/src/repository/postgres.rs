@@ -1,6 +1,5 @@
 use crate::errors::ApiError;
-use crate::index::FractionalIndex;
-use crate::models::{ContentBlock, ContentLink};
+use crate::models::{ContentBlock, ContentLink, FractionalIndex};
 use crate::repository::traits::ContentRepository;
 use async_trait::async_trait;
 use sqlx::{Row, types::Uuid};

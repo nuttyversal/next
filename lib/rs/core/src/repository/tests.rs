@@ -1,5 +1,4 @@
-use crate::index::FractionalIndex;
-use crate::models::{BlockContent, ContentBlock, ContentLink};
+use crate::models::{BlockContent, ContentBlock, ContentLink, FractionalIndex};
 use crate::repository::traits::ContentRepository;
 use std::sync::Arc;
 use uuid::Uuid;

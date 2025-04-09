@@ -1,18 +1,6 @@
-use crate::index::FractionalIndex;
-use serde::{Deserialize, Serialize};
+use crate::models::{BlockContent, FractionalIndex};
+use sqlx::types::Uuid;
 use thiserror::Error;
-use uuid::Uuid;
-
-/// Not to be confused with [ContentBlock].
-/// `ContentBlockContent` it might have been named,
-/// but `BlockContent` is shorter and unclaimed.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind")]
-pub enum BlockContent {
-	Page { title: String },
-	Heading { markdown: String },
-	Paragraph { markdown: String },
-}
 
 /// A block of content in the Nuttyverse.
 #[derive(Debug, Clone)]
@@ -25,7 +13,12 @@ pub struct ContentBlock {
 
 impl ContentBlock {
 	/// Create a new block of content.
-	pub fn new(id: Uuid, parent_id: Option<Uuid>, content: BlockContent, index: FractionalIndex) -> Self {
+	pub fn new(
+		id: Uuid,
+		parent_id: Option<Uuid>,
+		content: BlockContent,
+		index: FractionalIndex,
+	) -> Self {
 		Self {
 			id,
 			parent_id,
@@ -110,24 +103,4 @@ pub enum ContentBlockError {
 
 	#[error("Index is required")]
 	MissingIndex,
-}
-
-/// A link between two blocks of content.
-#[derive(Debug, Copy, Clone)]
-pub struct ContentLink {
-	pub id: Uuid,
-	pub source_id: Uuid,
-	pub target_id: Uuid,
-}
-
-impl ContentLink {
-	pub fn new(id: Uuid, source_id: Uuid, target_id: Uuid) -> Self {
-		Self { id, source_id, target_id }
-	}
-}
-
-impl ContentLink {
-	pub fn now(source_id: Uuid, target_id: Uuid) -> Self {
-		Self::new(Uuid::now_v7(), source_id, target_id)
-	}
 }
