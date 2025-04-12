@@ -20,7 +20,7 @@ const BASE58_ALPHABET: &[char] = &[
 /// Why 41 bits? Because 2^42 > 58^7 > 2^41.
 /// Why base-58? Because '0', 'O', 'I', and 'l' are ambiguous.
 /// Why do this at all? Because it's a fun idea.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NuttyId(String);
 
 impl NuttyId {

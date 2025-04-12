@@ -1,4 +1,4 @@
-use crate::models::{BlockContent, FractionalIndex};
+use crate::models::{BlockContent, FractionalIndex, NuttyId};
 use sqlx::types::Uuid;
 use thiserror::Error;
 
@@ -6,6 +6,7 @@ use thiserror::Error;
 #[derive(Debug, Clone)]
 pub struct ContentBlock {
 	pub id: Uuid,
+	pub nutty_id: NuttyId,
 	pub parent_id: Option<Uuid>,
 	pub content: BlockContent,
 	pub index: FractionalIndex,
@@ -21,6 +22,7 @@ impl ContentBlock {
 	) -> Self {
 		Self {
 			id,
+			nutty_id: NuttyId::from_uuid(id),
 			parent_id,
 			content,
 			index,
@@ -86,8 +88,12 @@ impl ContentBlockBuilder {
 
 	/// Build the content block, returning an error if required fields are not set.
 	pub fn try_build(self) -> Result<ContentBlock, ContentBlockError> {
+		let id = self.id.unwrap_or_else(Uuid::now_v7);
+		let nutty_id = NuttyId::from_uuid(id);
+
 		Ok(ContentBlock {
-			id: self.id.unwrap_or_else(Uuid::now_v7),
+			id,
+			nutty_id,
 			parent_id: self.parent_id,
 			content: self.content.ok_or(ContentBlockError::MissingContent)?,
 			index: self.index.ok_or(ContentBlockError::MissingIndex)?,

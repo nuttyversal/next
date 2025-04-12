@@ -1,5 +1,5 @@
 use crate::errors::ApiError;
-use crate::models::{ContentBlock, ContentLink, FractionalIndex};
+use crate::models::{ContentBlock, ContentLink, FractionalIndex, NuttyId};
 use crate::repository::traits::ContentRepository;
 use async_trait::async_trait;
 use sqlx::{Row, types::Uuid};
@@ -32,7 +32,7 @@ impl ContentRepository for PostgresContentRepository {
 		// Try to find the content block in the database.
 		let record = sqlx::query(
 			r#"
-				SELECT id, parent_id, content, index
+				SELECT id, nutty_id, parent_id, content, index
 				FROM blocks
 				WHERE id = $1
 			"#,
@@ -44,12 +44,14 @@ impl ContentRepository for PostgresContentRepository {
 		match (record, &*self.linked_repository.read().await) {
 			// Found the content block in the database!
 			(Some(record), _) => {
+				let nutty_id = NuttyId::new(record.get("nutty_id"));
 				let content = ContentBlock::deserialize_content(record.get("content"))?;
 				let index = FractionalIndex::new(record.get("index"))
 					.map_err(|e| ApiError::InvalidIndex(e.to_string()))?;
 
 				Ok(Some(ContentBlock {
 					id: record.get("id"),
+					nutty_id,
 					parent_id: record.get("parent_id"),
 					content,
 					index,
@@ -71,14 +73,15 @@ impl ContentRepository for PostgresContentRepository {
 		// Save the content block to the database.
 		sqlx::query(
 			r#"
-				INSERT INTO blocks (id, parent_id, content, index)
-				VALUES ($1, $2, $3, $4)
+				INSERT INTO blocks (id, nutty_id, parent_id, content, index)
+				VALUES ($1, $2, $3, $4, $5)
 				ON CONFLICT (id) DO UPDATE
 				SET parent_id = EXCLUDED.parent_id, content = EXCLUDED.content, index = EXCLUDED.index
-				RETURNING id, parent_id, content, index
+				RETURNING id, nutty_id, parent_id, content, index
 			"#,
 		)
 		.bind(content_block.id)
+		.bind(content_block.nutty_id.as_str())
 		.bind(content_block.parent_id)
 		.bind(content_block.serialize_content()?)
 		.bind(content_block.index.as_str())
