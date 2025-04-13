@@ -40,16 +40,6 @@ impl NuttyId {
 	}
 }
 
-impl TryFrom<String> for NuttyId {
-	type Error = String;
-
-	fn try_from(value: String) -> Result<Self, Self::Error> {
-		Ok(Self::new(
-			Uuid::parse_str(&value).map_err(|_| format!("Invalid UUID format: '{}'", value))?,
-		))
-	}
-}
-
 /// This poor Nutty ID is traumatized.
 ///
 /// Lost in the wild, with no UUID to call its own,
