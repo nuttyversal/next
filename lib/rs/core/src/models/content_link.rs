@@ -1,25 +1,25 @@
-use sqlx::types::Uuid;
+use crate::models::NuttyId;
 
 /// A link between two blocks of content.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct ContentLink {
-	pub id: Uuid,
-	pub source_id: Uuid,
-	pub target_id: Uuid,
+	pub nutty_id: NuttyId,
+	pub source_id: NuttyId,
+	pub target_id: NuttyId,
 }
 
 impl ContentLink {
-	pub fn new(id: Uuid, source_id: Uuid, target_id: Uuid) -> Self {
+	/// Create a new content link.
+	pub fn new(nutty_id: NuttyId, source_id: NuttyId, target_id: NuttyId) -> Self {
 		Self {
-			id,
+			nutty_id,
 			source_id,
 			target_id,
 		}
 	}
-}
 
-impl ContentLink {
-	pub fn now(source_id: Uuid, target_id: Uuid) -> Self {
-		Self::new(Uuid::now_v7(), source_id, target_id)
+	/// Create a new content link with a generated identifier (UUIDv7).
+	pub fn now(source_id: NuttyId, target_id: NuttyId) -> Self {
+		Self::new(NuttyId::now(), source_id, target_id)
 	}
 }

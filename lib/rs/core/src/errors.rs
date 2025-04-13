@@ -10,4 +10,7 @@ pub enum ApiError {
 
 	#[error("Invalid index: {0}")]
 	InvalidIndex(String),
+
+	#[error("Invalid Nutty ID: {0}")]
+	InvalidNuttyId(String),
 }

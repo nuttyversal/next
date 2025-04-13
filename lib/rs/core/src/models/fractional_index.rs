@@ -4,9 +4,10 @@ use thiserror::Error;
 
 /// A fractional index for ordering content blocks.
 ///
-/// The index is stored as a base-94 string, where each character represents a digit
-/// in the range [33, 126] (visible ASCII characters). This allows us to generate
-/// new indices between any two existing indices by averaging their values.
+/// The index is stored as a base-94 string, where each character represents
+/// a digit in the range [33, 126] (the set of visible ASCII characters),
+/// which enables generation of new index between any two existing indices
+/// by averaging their values together.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FractionalIndex(String);
 

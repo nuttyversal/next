@@ -1,4 +1,4 @@
-use crate::models::NuttyId;
+use crate::models::{AnyNuttyId, NuttyIdentifier};
 use regex::Regex;
 use std::fmt;
 
@@ -9,13 +9,13 @@ use std::fmt;
 /// optional text to render in the UI instead of the Nutty ID.
 #[derive(Debug)]
 pub struct NuttyTag {
-	nutty_id: NuttyId,
+	nutty_id: AnyNuttyId,
 	display_text: Option<String>,
 }
 
 impl NuttyTag {
 	/// Create a new `NuttyTag` from a Nutty ID and optional display text.
-	pub fn new(nutty_id: NuttyId, display_text: Option<String>) -> Self {
+	pub fn new(nutty_id: AnyNuttyId, display_text: Option<String>) -> Self {
 		Self {
 			nutty_id,
 			display_text,
@@ -39,7 +39,7 @@ impl NuttyTag {
 			// Format: [[abcdefg]]
 			1 => {
 				let id_str = parts[0].trim();
-				let nutty_id = NuttyId::try_from(id_str.to_string())?;
+				let nutty_id = AnyNuttyId::new(id_str)?;
 
 				Ok(Self {
 					nutty_id,
@@ -51,7 +51,7 @@ impl NuttyTag {
 			2 => {
 				let id_str = parts[0].trim();
 				let display = parts[1].trim();
-				let nutty_id = NuttyId::try_from(id_str.to_string())?;
+				let nutty_id = AnyNuttyId::new(id_str)?;
 
 				Ok(Self {
 					nutty_id,
@@ -83,7 +83,7 @@ impl NuttyTag {
 	}
 
 	/// Get the Nutty ID.
-	pub fn nutty_id(&self) -> &NuttyId {
+	pub fn nutty_id(&self) -> &AnyNuttyId {
 		&self.nutty_id
 	}
 
@@ -96,8 +96,8 @@ impl NuttyTag {
 impl fmt::Display for NuttyTag {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match &self.display_text {
-			Some(display) => write!(f, "[[{}|{}]]", self.nutty_id.as_str(), display),
-			None => write!(f, "[[{}]]", self.nutty_id.as_str()),
+			Some(display) => write!(f, "[[{}|{}]]", self.nutty_id().nid(), display),
+			None => write!(f, "[[{}]]", self.nutty_id().nid()),
 		}
 	}
 }
@@ -112,20 +112,23 @@ impl TryFrom<&str> for NuttyTag {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
+	use crate::models::*;
+	use nutty_id::valid_nutty_id;
+	use proptest::collection::vec;
+	use proptest::option;
 	use proptest::prelude::*;
 
 	#[test]
 	fn test_parse_simple_tag() {
 		let tag = NuttyTag::parse("[[abcdefg]]").unwrap();
-		assert_eq!(tag.nutty_id().as_str(), "abcdefg");
+		assert_eq!(tag.nutty_id().nid(), "abcdefg");
 		assert_eq!(tag.display_text(), None);
 	}
 
 	#[test]
 	fn test_parse_tag_with_display_text() {
 		let tag = NuttyTag::parse("[[abcdefg|Display Text]]").unwrap();
-		assert_eq!(tag.nutty_id().as_str(), "abcdefg");
+		assert_eq!(tag.nutty_id().nid(), "abcdefg");
 		assert_eq!(tag.display_text(), Some("Display Text"));
 	}
 
@@ -153,55 +156,14 @@ mod tests {
 	#[test]
 	fn test_display_trait() {
 		// A simple tag.
-		let nutty_id = NuttyId::try_from("abcdefg".to_string()).unwrap();
+		let nutty_id = AnyNuttyId::new("abcdefg").unwrap();
 		let tag = NuttyTag::new(nutty_id, None);
 		assert_eq!(format!("{}", tag), "[[abcdefg]]");
 
 		// A tag with display text.
-		let nutty_id = NuttyId::try_from("abcdefg".to_string()).unwrap();
+		let nutty_id = AnyNuttyId::new("abcdefg").unwrap();
 		let tag = NuttyTag::new(nutty_id, Some("Display Text".to_string()));
 		assert_eq!(format!("{}", tag), "[[abcdefg|Display Text]]");
-	}
-
-	proptest! {
-		 #[test]
-		 fn test_parse_valid_tag_property(id in "[1-9A-HJ-NP-Za-km-z]{7}") {
-			  let tag_str = format!("[[{}]]", id);
-			  let result = NuttyTag::parse(&tag_str);
-			  assert!(result.is_ok());
-
-			  let parsed = result.unwrap();
-			  assert_eq!(parsed.nutty_id().as_str(), id);
-			  assert_eq!(parsed.display_text(), None);
-		 }
-
-		 #[test]
-		 fn test_parse_valid_tag_with_display_property(
-			  id in "[1-9A-HJ-NP-Za-km-z]{7}",
-			  display in "[^|]{1,100}"
-		 ) {
-			  let tag_str = format!("[[{}|{}]]", id, display);
-			  let result = NuttyTag::parse(&tag_str);
-			  assert!(result.is_ok());
-
-			  let parsed = result.unwrap();
-			  assert_eq!(parsed.nutty_id().as_str(), id);
-			  assert_eq!(parsed.display_text(), Some(display.trim()));
-		 }
-
-		 #[test]
-		 fn test_roundtrip_property(
-			  id in "[1-9A-HJ-NP-Za-km-z]{7}",
-			  display_option in proptest::option::of("[^|]{1,100}")
-		 ) {
-			  let nutty_id = NuttyId::try_from(id.clone()).unwrap();
-			  let tag = NuttyTag::new(nutty_id, display_option.clone().map(|s| s.trim().to_string()));
-			  let tag_str = format!("{}", tag);
-			  let parsed = NuttyTag::parse(&tag_str).unwrap();
-
-			  assert_eq!(parsed.nutty_id().as_str(), id);
-			  assert_eq!(parsed.display_text(), display_option.as_deref().map(str::trim));
-		 }
 	}
 
 	#[test]
@@ -229,15 +191,15 @@ mod tests {
 	fn test_edge_cases() {
 		// Can we trim whitespace?
 		let tag = NuttyTag::parse("[[  abcdefg  ]]").unwrap();
-		assert_eq!(tag.nutty_id().as_str(), "abcdefg");
+		assert_eq!(tag.nutty_id().nid(), "abcdefg");
 
 		let tag = NuttyTag::parse("[[ abcdefg |   Display Text   ]]").unwrap();
-		assert_eq!(tag.nutty_id().as_str(), "abcdefg");
+		assert_eq!(tag.nutty_id().nid(), "abcdefg");
 		assert_eq!(tag.display_text(), Some("Display Text"));
 
 		// Can we have empty strings as display text.
 		let tag = NuttyTag::parse("[[abcdefg|]]").unwrap();
-		assert_eq!(tag.nutty_id().as_str(), "abcdefg");
+		assert_eq!(tag.nutty_id().nid(), "abcdefg");
 		assert_eq!(tag.display_text(), Some(""));
 	}
 
@@ -250,23 +212,23 @@ mod tests {
 		// Test single valid tag.
 		let tags = NuttyTag::parse_all("[[abcdefg]]").unwrap();
 		assert_eq!(tags.len(), 1);
-		assert_eq!(tags[0].nutty_id().as_str(), "abcdefg");
+		assert_eq!(tags[0].nutty_id().nid(), "abcdefg");
 		assert_eq!(tags[0].display_text(), None);
 
 		// Test multiple valid tags.
 		let tags = NuttyTag::parse_all("[[abcdefg]] [[1234567|Display Text]]").unwrap();
 		assert_eq!(tags.len(), 2);
-		assert_eq!(tags[0].nutty_id().as_str(), "abcdefg");
+		assert_eq!(tags[0].nutty_id().nid(), "abcdefg");
 		assert_eq!(tags[0].display_text(), None);
-		assert_eq!(tags[1].nutty_id().as_str(), "1234567");
+		assert_eq!(tags[1].nutty_id().nid(), "1234567");
 		assert_eq!(tags[1].display_text(), Some("Display Text"));
 
 		let tags = // Test mixed content with invalid tags.
 			NuttyTag::parse_all("Hello [[abcdefg]] World [[invalid]] [[1234567|Display]]").unwrap();
 		assert_eq!(tags.len(), 2);
-		assert_eq!(tags[0].nutty_id().as_str(), "abcdefg");
+		assert_eq!(tags[0].nutty_id().nid(), "abcdefg");
 		assert_eq!(tags[0].display_text(), None);
-		assert_eq!(tags[1].nutty_id().as_str(), "1234567");
+		assert_eq!(tags[1].nutty_id().nid(), "1234567");
 		assert_eq!(tags[1].display_text(), Some("Display"));
 
 		// Test nested tags (should be treated as invalid).
@@ -276,18 +238,57 @@ mod tests {
 		// Test tags with whitespace.
 		let tags = NuttyTag::parse_all("  [[  abcdefg  ]] & [[  1234567  |  Display  ]]  ").unwrap();
 		assert_eq!(tags.len(), 2);
-		assert_eq!(tags[0].nutty_id().as_str(), "abcdefg");
+		assert_eq!(tags[0].nutty_id().nid(), "abcdefg");
 		assert_eq!(tags[0].display_text(), None);
-		assert_eq!(tags[1].nutty_id().as_str(), "1234567");
+		assert_eq!(tags[1].nutty_id().nid(), "1234567");
 		assert_eq!(tags[1].display_text(), Some("Display"));
 	}
 
 	proptest! {
+		 #[test]
+		 fn test_parse_valid_tag_property(id in valid_nutty_id()) {
+			  let tag_str = format!("[[{}]]", id);
+			  let result = NuttyTag::parse(&tag_str);
+			  assert!(result.is_ok());
+
+			  let parsed = result.unwrap();
+			  assert_eq!(parsed.nutty_id().nid(), id);
+			  assert_eq!(parsed.display_text(), None);
+		 }
+
+		 #[test]
+		 fn test_parse_valid_tag_with_display_property(
+			  id in valid_nutty_id(),
+			  display in "[^|]{1,100}"
+		 ) {
+			  let tag_str = format!("[[{}|{}]]", id, display);
+			  let result = NuttyTag::parse(&tag_str);
+			  assert!(result.is_ok());
+
+			  let parsed = result.unwrap();
+			  assert_eq!(parsed.nutty_id().nid(), id);
+			  assert_eq!(parsed.display_text(), Some(display.trim()));
+		 }
+
+		 #[test]
+		 fn test_roundtrip_property(
+			  id in valid_nutty_id(),
+			  display_option in proptest::option::of("[^|]{1,100}")
+		 ) {
+			  let nutty_id = AnyNuttyId::new(&id).unwrap();
+			  let tag = NuttyTag::new(nutty_id, display_option.clone().map(|s| s.trim().to_string()));
+			  let tag_str = format!("{}", tag);
+			  let parsed = NuttyTag::parse(&tag_str).unwrap();
+
+			  assert_eq!(parsed.nutty_id().nid(), id);
+			  assert_eq!(parsed.display_text(), display_option.as_deref().map(str::trim));
+		 }
+
 		#[test]
 		fn test_parse_all_property(
-			ids in proptest::collection::vec("[1-9A-HJ-NP-Za-km-z]{7}", 1..10),
-			displays in proptest::collection::vec(proptest::option::of("[^|\\]]{1,100}"), 1..10),
-			random_text in proptest::collection::vec("[^\\[]*", 1..10)
+			ids in vec(valid_nutty_id(), 1..10),
+			displays in vec(option::of("[^|\\]]{1,100}"), 1..10),
+			random_text in vec("[^\\[]*", 1..10)
 		) {
 			// Create a string with alternating tags and random text.
 			let mut text = String::new();
@@ -308,7 +309,7 @@ mod tests {
 
 			// Verify each tag.
 			for (tag, (id, display)) in tags.iter().zip(ids.iter().zip(displays.iter())) {
-				assert_eq!(tag.nutty_id().as_str(), *id);
+				assert_eq!(tag.nutty_id().nid(), *id);
 				assert_eq!(tag.display_text(), display.as_deref().map(str::trim));
 			}
 		}

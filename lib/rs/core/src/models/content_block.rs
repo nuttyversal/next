@@ -1,42 +1,44 @@
 use crate::models::{BlockContent, FractionalIndex, NuttyId};
-use sqlx::types::Uuid;
 use thiserror::Error;
 
 /// A block of content in the Nuttyverse.
 #[derive(Debug, Clone)]
 pub struct ContentBlock {
-	pub id: Uuid,
-	pub nutty_id: NuttyId,
-	pub parent_id: Option<Uuid>,
+	nutty_id: NuttyId,
+	pub parent_id: Option<NuttyId>,
 	pub content: BlockContent,
 	pub index: FractionalIndex,
 }
 
 impl ContentBlock {
-	/// Create a new block of content.
+	/// Create a new content block.
 	pub fn new(
-		id: Uuid,
-		parent_id: Option<Uuid>,
+		nutty_id: NuttyId,
+		parent_id: Option<NuttyId>,
 		content: BlockContent,
 		index: FractionalIndex,
 	) -> Self {
 		Self {
-			id,
-			nutty_id: NuttyId::from_uuid(id),
+			nutty_id,
 			parent_id,
 			content,
 			index,
 		}
 	}
 
-	/// Create a new block of content with a generated identifier (UUIDv7).
-	pub fn now(parent_id: Option<Uuid>, content: BlockContent, index: FractionalIndex) -> Self {
-		Self::new(Uuid::now_v7(), parent_id, content, index)
+	/// Create a new content block with a generated identifier (UUIDv7).
+	pub fn now(parent_id: Option<NuttyId>, content: BlockContent, index: FractionalIndex) -> Self {
+		Self::new(NuttyId::now(), parent_id, content, index)
+	}
+
+	/// Get the Nutty ID.
+	pub fn nutty_id(&self) -> &NuttyId {
+		&self.nutty_id
 	}
 
 	/// Serialize content to a JSON value.
 	pub fn serialize_content(&self) -> Result<serde_json::Value, serde_json::Error> {
-		serde_json::to_value(&self.content)
+		serde_json::to_value(self.content.clone())
 	}
 
 	/// Deserialize content from a JSON value.
@@ -52,35 +54,35 @@ impl ContentBlock {
 	}
 }
 
-/// Builder for creating new content blocks.
+/// A builder for creating new content blocks.
 #[derive(Default)]
 pub struct ContentBlockBuilder {
-	id: Option<Uuid>,
-	parent_id: Option<Uuid>,
+	nutty_id: Option<NuttyId>,
+	parent_id: Option<NuttyId>,
 	content: Option<BlockContent>,
 	index: Option<FractionalIndex>,
 }
 
 impl ContentBlockBuilder {
-	/// Set the block's ID.
-	pub fn id(mut self, id: Uuid) -> Self {
-		self.id = Some(id);
+	/// Set the Nutty ID.
+	pub fn nutty_id(mut self, nutty_id: NuttyId) -> Self {
+		self.nutty_id = Some(nutty_id);
 		self
 	}
 
-	/// Set the block's parent ID.
-	pub fn parent_id(mut self, parent_id: Option<Uuid>) -> Self {
+	/// Set the parent Nutty ID.
+	pub fn parent_id(mut self, parent_id: Option<NuttyId>) -> Self {
 		self.parent_id = parent_id;
 		self
 	}
 
-	/// Set the block's content.
+	/// Set the block content.
 	pub fn content(mut self, content: BlockContent) -> Self {
 		self.content = Some(content);
 		self
 	}
 
-	/// Set the block's index.
+	/// Set the positional index.
 	pub fn index(mut self, index: FractionalIndex) -> Self {
 		self.index = Some(index);
 		self
@@ -88,12 +90,8 @@ impl ContentBlockBuilder {
 
 	/// Build the content block, returning an error if required fields are not set.
 	pub fn try_build(self) -> Result<ContentBlock, ContentBlockError> {
-		let id = self.id.unwrap_or_else(Uuid::now_v7);
-		let nutty_id = NuttyId::from_uuid(id);
-
 		Ok(ContentBlock {
-			id,
-			nutty_id,
+			nutty_id: self.nutty_id.unwrap_or_else(NuttyId::now),
 			parent_id: self.parent_id,
 			content: self.content.ok_or(ContentBlockError::MissingContent)?,
 			index: self.index.ok_or(ContentBlockError::MissingIndex)?,

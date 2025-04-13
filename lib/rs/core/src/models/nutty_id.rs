@@ -1,57 +1,52 @@
+use proptest::prelude::Strategy;
 use sqlx::types::Uuid;
+use std::cmp::Ordering;
 
-/// Base-58 alphabet — the ₿ encoding.
-/// Satoshi Nakamoto came up with it.
-const BASE58_ALPHABET: &[char] = &[
-	'1', '2', '3', '4', '5', '6', '7', '8', '9', // …
-	'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', // …
-	'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', // …
-	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', // …
-	'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-];
-
-/// A Nutty ID is a short identifier for a Nuttyverse resource.
+/// A trait for objects that have a Nutty ID.
 ///
-/// It can be derived from a UUID, but isn't a UUID itself.
-/// It is a base-58 encoded string of 7 characters derived
-/// from the last 41 bits of a UUID. Useful for generating
-/// permanent URL links like https://nuttyver.se/abcdefg.
+/// Used in signatures for functions and methods that can
+/// accept any Nutty ID, even the ones that are dissociated.
+pub trait NuttyIdentifier {
+	/// Get the Nutty ID.
+	fn nid(&self) -> String;
+}
+
+/// A Nutty ID is a newtype wrapper around a UUID.
+///
+/// It can be used to derive a short base-58 encoded string
+/// of 7 characters derived from the last 41 bits of a UUID.
+/// For generating permalinks: https://nuttyver.se/abcdefg.
 ///
 /// Why 41 bits? Because 2^42 > 58^7 > 2^41.
 /// Why base-58? Because '0', 'O', 'I', and 'l' are ambiguous.
 /// Why do this at all? Because it's a fun idea.
-#[derive(Debug, Clone)]
-pub struct NuttyId(String);
+#[derive(Debug, Copy, Clone, Eq, Hash, PartialEq)]
+pub struct NuttyId {
+	uuid: Uuid,
+}
 
 impl NuttyId {
-	/// Create a new Nutty ID from a string without validation.
-	/// [WARN] This should only be used for trusted inputs.
-	pub fn new(id: String) -> Self {
-		Self(id)
-	}
-
 	/// Derive a Nutty ID from a UUID.
-	pub fn from_uuid(id: Uuid) -> Self {
-		let last_41_bits = extract_last_41_bits(id);
-		let nutty_id = encode_base58(last_41_bits);
-
-		Self(nutty_id)
+	pub fn new(uuid: Uuid) -> Self {
+		Self { uuid }
 	}
 
-	/// Check if a string is a valid Nutty ID.
-	pub fn is_valid(id: &str) -> bool {
-		// Assert: It must be exactly 7 characters.
-		if id.len() != 7 {
-			return false;
-		}
-
-		// Assert: It must contain only valid characters.
-		id.chars().all(|c| BASE58_ALPHABET.contains(&c))
+	/// Create a new Nutty ID from a UUIDv7.
+	pub fn now() -> Self {
+		let uuid = Uuid::now_v7();
+		Self::new(uuid)
 	}
 
-	/// Get the string representation of the Nutty ID.
-	pub fn as_str(&self) -> &str {
-		&self.0
+	/// Get the UUID.
+	pub fn uuid(&self) -> &Uuid {
+		&self.uuid
+	}
+}
+
+impl NuttyIdentifier for NuttyId {
+	fn nid(&self) -> String {
+		let last_41_bits = extract_last_41_bits(&self.uuid);
+		encode_base_58(last_41_bits)
 	}
 }
 
@@ -59,31 +54,142 @@ impl TryFrom<String> for NuttyId {
 	type Error = String;
 
 	fn try_from(value: String) -> Result<Self, Self::Error> {
-		if Self::is_valid(&value) {
-			Ok(Self(value))
-		} else {
-			Err(format!("Invalid Nutty ID format: '{}'", value))
+		Ok(Self::new(
+			Uuid::parse_str(&value).map_err(|_| format!("Invalid UUID format: '{}'", value))?,
+		))
+	}
+}
+
+/// This poor Nutty ID is traumatized.
+///
+/// Lost in the wild, with no UUID to call its own,
+/// it wanders through memory, a nomad without a home.
+///
+/// Any Nutty ID can be derived from a UUID,
+/// but the path backward is darkened, you see.
+///
+/// To find its ancestral UUID, you must decree
+/// a solemn query to the content block tree.
+///
+/// tl;dr: it's surjective, but not injective.
+#[derive(Debug, Copy, Clone, Eq, Hash, PartialEq)]
+pub struct DissociatedNuttyId {
+	nid: [u8; 7],
+}
+
+impl DissociatedNuttyId {
+	/// Create a new Nutty ID from a string slice.
+	pub fn new(nid: &str) -> Result<Self, String> {
+		if !is_valid_nutty_id(nid) {
+			return Err(format!("Invalid Nutty ID format: '{}'", nid));
+		}
+
+		let nid_bytes: [u8; 7] = match nid.as_bytes().try_into() {
+			Ok(bytes) => bytes,
+			Err(_) => return Err(format!("Failed to convert '{}' to 7 bytes", nid)),
+		};
+
+		Ok(Self { nid: nid_bytes })
+	}
+}
+
+impl NuttyIdentifier for DissociatedNuttyId {
+	fn nid(&self) -> String {
+		std::str::from_utf8(&self.nid)
+			// Since we validated the bytes on creation,
+			// this shouldn't fail. Smart constructors. 😎
+			.expect("Nutty ID contains invalid UTF-8")
+			.to_string()
+	}
+}
+
+/// Either [NuttyId] or [DissociatedNuttyId].
+///
+/// Used in signatures for functions and methods that can
+/// accept any Nutty ID, even the ones that are dissociated.
+#[derive(Debug, Copy, Clone, Eq, Hash, PartialEq)]
+pub enum AnyNuttyId {
+	/// A Nutty ID associated with a UUID.
+	Associated(NuttyId),
+
+	/// A Nutty ID without a UUID — dissociated. 💀
+	Dissociated(DissociatedNuttyId),
+}
+
+impl AnyNuttyId {
+	/// Create a new Nutty ID from a string slice.
+	pub fn new(nid: &str) -> Result<Self, String> {
+		match DissociatedNuttyId::new(nid) {
+			Ok(dissociated) => Ok(AnyNuttyId::Dissociated(dissociated)),
+			Err(e) => Err(e),
 		}
 	}
 }
 
-/// Extract the last 41 bits of a UUID.
-fn extract_last_41_bits(uuid: Uuid) -> u64 {
-	let bytes = uuid.as_bytes();
-
-	// Take the last bit (LSB) from the 6th byte from the end.
-	let mut value = (bytes[bytes.len() - 6] & 0x01) as u64;
-
-	// Then, take the last 5 bytes (40 bits) from MSB to LSB.
-	(bytes.len() - 5..bytes.len()).for_each(|i| {
-		value = (value << 8) | bytes[i] as u64;
-	});
-
-	value
+impl NuttyIdentifier for AnyNuttyId {
+	fn nid(&self) -> String {
+		match self {
+			AnyNuttyId::Associated(nutty_id) => nutty_id.nid(),
+			AnyNuttyId::Dissociated(nutty_id) => nutty_id.nid(),
+		}
+	}
 }
 
-/// Encode a u64 value to a base-58 string (big-endian).
-fn encode_base58(value: u64) -> String {
+impl From<NuttyId> for AnyNuttyId {
+	fn from(nutty_id: NuttyId) -> Self {
+		AnyNuttyId::Associated(nutty_id)
+	}
+}
+
+impl From<DissociatedNuttyId> for AnyNuttyId {
+	fn from(nutty_id: DissociatedNuttyId) -> Self {
+		AnyNuttyId::Dissociated(nutty_id)
+	}
+}
+
+/// Base-58 alphabet — the ₿ encoding.
+/// Satoshi Nakamoto came up with it.
+const BASE_58_ALPHABET: &[char] = &[
+	'1', '2', '3', '4', '5', '6', '7', '8', '9', // …
+	'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', // …
+	'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', // …
+	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', // …
+	'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+];
+
+/// Check if a string is a valid Nutty ID.
+fn is_valid_nutty_id(id: &str) -> bool {
+	// Assert: It must be exactly 7 characters.
+	if id.len() != 7 {
+		return false;
+	}
+
+	// Assert: It must contain only valid characters.
+	if !id.chars().all(|c| BASE_58_ALPHABET.contains(&c)) {
+		return false;
+	}
+
+	// Assert: It must be derived from the last 41 bits of a UUID.
+	let max_41_bit_value_base_58: &str = "zmM9z4E";
+	id <= max_41_bit_value_base_58
+}
+
+/// Extract the last 41 bits of a UUID.
+fn extract_last_41_bits(uuid: &Uuid) -> u64 {
+	let bytes = uuid.as_bytes();
+
+	// Extract the last bit (41) from the 6th byte from the end,
+	// plus all the bits (1..40) from the last 5 bytes.
+	(((bytes[10] & 0x01) as u64) << 40)
+		| ((bytes[11] as u64) << 32)
+		| ((bytes[12] as u64) << 24)
+		| ((bytes[13] as u64) << 16)
+		| ((bytes[14] as u64) << 8)
+		| (bytes[15] as u64)
+}
+
+/// Encode a u64 value to a base-58 string in big-endian order.
+fn encode_base_58(value: u64) -> String {
 	const FIXED_LENGTH: usize = 7;
 	const BASE: u64 = 58;
 
@@ -107,15 +213,27 @@ fn encode_base58(value: u64) -> String {
 	// Left pad with ones. Look, no package needed. 👀
 	// https://en.wikipedia.org/wiki/Npm_left-pad_incident
 	for _ in 0..padding_length {
-		result.push(BASE58_ALPHABET[0]);
+		result.push(BASE_58_ALPHABET[0]);
 	}
 
 	// Encode the digits in big-endian order.
 	for digit in digits.iter().rev() {
-		result.push(BASE58_ALPHABET[*digit]);
+		result.push(BASE_58_ALPHABET[*digit]);
 	}
 
 	result
+}
+
+// A proptest strategy for generating valid Nutty IDs.
+pub fn valid_nutty_id() -> impl Strategy<Value = String> {
+	// It must be base-58 encoded and 7 characters long.
+	let regex_strategy = "[1-9A-HJ-NP-Za-km-z]{7}";
+
+	// It must be derived from the last 41 bits of a UUID.
+	regex_strategy.prop_filter("Nutty ID must be <= zmM9z4E", |s| {
+		// Compare lexicographically with the maximum value.
+		s.cmp(&"zmM9z4E".to_string()) != Ordering::Greater
+	})
 }
 
 #[cfg(test)]
@@ -168,8 +286,8 @@ mod tests {
 		// ┃ • Nutty ID: qfWLRgy                             ┃
 		// ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-		let id = NuttyId::from_uuid(uuid);
-		assert_eq!(id.as_str(), "qfWLRgy");
+		let nutty_id = NuttyId::new(uuid);
+		assert_eq!(nutty_id.nid(), "qfWLRgy");
 	}
 
 	/// A newtype wrapper for [Uuid] to implement [Arbitrary].
@@ -190,44 +308,36 @@ mod tests {
 	proptest! {
 		#[test]
 		fn test_nutty_id_length(uuid in any::<TestUuid>()) {
-			let id = NuttyId::from_uuid(uuid.0);
-			assert_eq!(id.as_str().len(), 7);
+			let nutty_id = NuttyId::new(uuid.0);
+			assert_eq!(nutty_id.nid().len(), 7);
 		}
 
 		#[test]
 		fn test_nutty_id_chars(uuid in any::<TestUuid>()) {
-			let id = NuttyId::from_uuid(uuid.0);
-			assert!(id.as_str().chars().all(|c| BASE58_ALPHABET.contains(&c)));
+			let nutty_id = NuttyId::new(uuid.0);
+			assert!(nutty_id.nid().chars().all(|c| BASE_58_ALPHABET.contains(&c)));
 		}
 
 		#[test]
 		fn test_nutty_id_padding(uuid in any::<TestUuid>()) {
-			let id = NuttyId::from_uuid(uuid.0);
-			let value = extract_last_41_bits(uuid.0);
+			let nutty_id = NuttyId::new(uuid.0);
+			let value = extract_last_41_bits(&uuid.0);
 
 			// If the value is small enough,
-			// then it should be padded.
+			// then it should be left-padded.
 			if value < 58u64.pow(6) {
-				let leading_ones = id.as_str().chars().take_while(|&c| c == '1').count();
+				let leading_ones = nutty_id.nid().chars().take_while(|&c| c == '1').count();
 				assert!(leading_ones > 0);
 			}
 		}
 
 		#[test]
 		fn test_nutty_id_ordering(uuid1 in any::<TestUuid>(), uuid2 in any::<TestUuid>()) {
-			let id1 = NuttyId::from_uuid(uuid1.0);
-			let id2 = NuttyId::from_uuid(uuid2.0);
-			let bits1 = extract_last_41_bits(uuid1.0);
-			let bits2 = extract_last_41_bits(uuid2.0);
-			assert_eq!(id1.as_str() < id2.as_str(), bits1 < bits2);
-		}
-
-		#[test]
-		fn test_nutty_id_uniqueness(uuid1 in any::<TestUuid>(), uuid2 in any::<TestUuid>()) {
-			prop_assume!(uuid1.0 != uuid2.0);
-			let id1 = NuttyId::from_uuid(uuid1.0);
-			let id2 = NuttyId::from_uuid(uuid2.0);
-			assert_ne!(id1.as_str(), id2.as_str());
+			let nutty_id1 = NuttyId::new(uuid1.0);
+			let nutty_id2 = NuttyId::new(uuid2.0);
+			let bits1 = extract_last_41_bits(&uuid1.0);
+			let bits2 = extract_last_41_bits(&uuid2.0);
+			assert_eq!(nutty_id1.nid() < nutty_id2.nid(), bits1 < bits2);
 		}
 	}
 
@@ -235,8 +345,8 @@ mod tests {
 	fn test_zero_value() {
 		// Create a UUID with all bits set to 0.
 		let uuid = Uuid::from_bytes([0; 16]);
-		let id = NuttyId::from_uuid(uuid);
-		assert_eq!(id.as_str(), "1111111");
+		let nutty_id = NuttyId::new(uuid);
+		assert_eq!(nutty_id.nid(), "1111111");
 	}
 
 	#[test]
@@ -252,80 +362,40 @@ mod tests {
 		// Set the last bit in the 6th byte from the end (41st bit).
 		bytes[10] |= 0x01;
 		let uuid = Uuid::from_bytes(bytes);
-		let id = NuttyId::from_uuid(uuid);
+		let nutty_id = NuttyId::new(uuid);
 
 		// Calculate the expected maximum value.
 		let max_value = (1u64 << 41) - 1;
-		let extracted = extract_last_41_bits(uuid);
+		let extracted = extract_last_41_bits(&uuid);
 
 		// The extracted value should match the maximum value.
 		assert_eq!(extracted, max_value);
 
 		// The ID should be exactly 7 characters.
-		assert_eq!(id.as_str().len(), 7);
+		assert_eq!(nutty_id.nid().len(), 7);
 
 		// The value should be stable.
-		assert_eq!(id.as_str(), "zmM9z4E");
+		assert_eq!(nutty_id.nid(), "zmM9z4E");
 	}
 
 	#[test]
-	fn test_is_valid() {
+	fn test_is_valid_nutty_id() {
 		// Valid cases.
-		assert!(NuttyId::is_valid("1111111"));
-		assert!(NuttyId::is_valid("abcdefg"));
-		assert!(NuttyId::is_valid("ABCDEFG"));
-		assert!(NuttyId::is_valid("1234567"));
-		assert!(NuttyId::is_valid("zmM9z4E"));
+		assert!(is_valid_nutty_id("1111111"));
+		assert!(is_valid_nutty_id("abcdefg"));
+		assert!(is_valid_nutty_id("ABCDEFG"));
+		assert!(is_valid_nutty_id("1234567"));
+		assert!(is_valid_nutty_id("zmM9z4E"));
 
 		// Invalid cases.
-		assert!(!NuttyId::is_valid("")); // Too short.
-		assert!(!NuttyId::is_valid("123456")); // Too short.
-		assert!(!NuttyId::is_valid("12345678")); // Too long.
-		assert!(!NuttyId::is_valid("abcdef0")); // Contains '0'.
-		assert!(!NuttyId::is_valid("abcdefO")); // Contains 'O'.
-		assert!(!NuttyId::is_valid("abcdefI")); // Contains 'I'.
-		assert!(!NuttyId::is_valid("abcdefl")); // Contains 'l'.
-		assert!(!NuttyId::is_valid("abcdef!")); // Contains invalid character.
-	}
-
-	#[test]
-	fn test_try_from() {
-		// Valid cases.
-		assert!(NuttyId::try_from("1111111".to_string()).is_ok());
-		assert!(NuttyId::try_from("abcdefg".to_string()).is_ok());
-		assert!(NuttyId::try_from("ABCDEFG".to_string()).is_ok());
-		assert!(NuttyId::try_from("1234567".to_string()).is_ok());
-		assert!(NuttyId::try_from("zmM9z4E".to_string()).is_ok());
-
-		// Invalid cases.
-		assert!(NuttyId::try_from("".to_string()).is_err());
-		assert!(NuttyId::try_from("123456".to_string()).is_err());
-		assert!(NuttyId::try_from("12345678".to_string()).is_err());
-		assert!(NuttyId::try_from("abcdef0".to_string()).is_err());
-		assert!(NuttyId::try_from("abcdefO".to_string()).is_err());
-		assert!(NuttyId::try_from("abcdefI".to_string()).is_err());
-		assert!(NuttyId::try_from("abcdefl".to_string()).is_err());
-		assert!(NuttyId::try_from("abcdef!".to_string()).is_err());
-
-		// Test error messages.
-		let err = NuttyId::try_from("".to_string()).unwrap_err();
-		assert!(err.contains("Invalid Nutty ID format"));
-		assert!(err.contains("''"));
-
-		let err = NuttyId::try_from("abcdef0".to_string()).unwrap_err();
-		assert!(err.contains("Invalid Nutty ID format"));
-		assert!(err.contains("'abcdef0'"));
-	}
-
-	proptest! {
-		#[test]
-		fn test_try_from_property(id in "[1-9A-HJ-NP-Za-km-z]{7}") {
-			assert!(NuttyId::try_from(id).is_ok());
-		}
-
-		#[test]
-		fn test_try_from_invalid_property(id in "[^1-9A-HJ-NP-Za-km-z]+") {
-			assert!(NuttyId::try_from(id).is_err());
-		}
+		assert!(!is_valid_nutty_id("")); // Too short.
+		assert!(!is_valid_nutty_id("123456")); // Too short.
+		assert!(!is_valid_nutty_id("12345678")); // Too long.
+		assert!(!is_valid_nutty_id("abcdef0")); // Contains '0'.
+		assert!(!is_valid_nutty_id("abcdefO")); // Contains 'O'.
+		assert!(!is_valid_nutty_id("abcdefI")); // Contains 'I'.
+		assert!(!is_valid_nutty_id("abcdefl")); // Contains 'l'.
+		assert!(!is_valid_nutty_id("abcdef!")); // Contains invalid character.
+		assert!(!is_valid_nutty_id("zzzzzzz")); // Not derived from UUID.
 	}
 }
