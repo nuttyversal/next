@@ -1,4 +1,4 @@
-use crate::models::{AnyNuttyId, NuttyIdentifier};
+use crate::models::AnyNuttyId;
 use regex::Regex;
 use std::fmt;
 

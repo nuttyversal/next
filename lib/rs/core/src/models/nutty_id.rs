@@ -2,15 +2,6 @@ use proptest::prelude::Strategy;
 use sqlx::types::Uuid;
 use std::cmp::Ordering;
 
-/// A trait for objects that have a Nutty ID.
-///
-/// Used in signatures for functions and methods that can
-/// accept any Nutty ID, even the ones that are dissociated.
-pub trait NuttyIdentifier {
-	/// Get the Nutty ID.
-	fn nid(&self) -> String;
-}
-
 /// A Nutty ID is a newtype wrapper around a UUID.
 ///
 /// It can be used to derive a short base-58 encoded string
@@ -41,10 +32,9 @@ impl NuttyId {
 	pub fn uuid(&self) -> &Uuid {
 		&self.uuid
 	}
-}
 
-impl NuttyIdentifier for NuttyId {
-	fn nid(&self) -> String {
+	/// Get the Nutty ID.
+	pub fn nid(&self) -> String {
 		let last_41_bits = extract_last_41_bits(&self.uuid);
 		encode_base_58(last_41_bits)
 	}
@@ -91,10 +81,9 @@ impl DissociatedNuttyId {
 
 		Ok(Self { nid: nid_bytes })
 	}
-}
 
-impl NuttyIdentifier for DissociatedNuttyId {
-	fn nid(&self) -> String {
+	/// Get the Nutty ID.
+	pub fn nid(&self) -> String {
 		std::str::from_utf8(&self.nid)
 			// Since we validated the bytes on creation,
 			// this shouldn't fail. Smart constructors. 😎
@@ -124,10 +113,9 @@ impl AnyNuttyId {
 			Err(e) => Err(e),
 		}
 	}
-}
 
-impl NuttyIdentifier for AnyNuttyId {
-	fn nid(&self) -> String {
+	/// Get the Nutty ID.
+	pub fn nid(&self) -> String {
 		match self {
 			AnyNuttyId::Associated(nutty_id) => nutty_id.nid(),
 			AnyNuttyId::Dissociated(nutty_id) => nutty_id.nid(),

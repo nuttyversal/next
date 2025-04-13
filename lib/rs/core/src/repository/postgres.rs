@@ -1,7 +1,5 @@
 use crate::errors::ApiError;
-use crate::models::{
-	AnyNuttyId, ContentBlock, ContentLink, FractionalIndex, NuttyId, NuttyIdentifier,
-};
+use crate::models::{AnyNuttyId, ContentBlock, ContentLink, FractionalIndex, NuttyId};
 use crate::repository::traits::ContentRepository;
 use async_trait::async_trait;
 
