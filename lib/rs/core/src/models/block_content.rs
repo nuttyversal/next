@@ -14,9 +14,9 @@ pub enum BlockContent {
 
 impl BlockContent {
 	/// Parse the target [NuttyTag] list from the content block.
-	pub fn parse_target_tags(&self) -> Result<Vec<NuttyTag>, String> {
+	pub fn parse_target_tags(&self) -> Vec<NuttyTag> {
 		match self {
-			BlockContent::Page { .. } => Ok(vec![]),
+			BlockContent::Page { .. } => vec![],
 			BlockContent::Heading { markdown } => NuttyTag::parse_all(markdown),
 			BlockContent::Paragraph { markdown } => NuttyTag::parse_all(markdown),
 		}

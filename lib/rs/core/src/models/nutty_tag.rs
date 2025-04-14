@@ -65,11 +65,11 @@ impl NuttyTag {
 	}
 
 	/// Parse a given string and extracts a [NuttyTag] list.
-	pub fn parse_all(value: &str) -> Result<Vec<Self>, String> {
+	pub fn parse_all(value: &str) -> Vec<Self> {
 		let mut tags = Vec::new();
 
-		let re = // Matches [[…]] where … is any character(s) except ]].
-			Regex::new(r"\[\[([^]]+)\]\]").map_err(|e| format!("Failed to compile regex: {}", e))?;
+		// Matches [[…]] where … is any character(s) except ]].
+		let re = Regex::new(r"\[\[([^]]+)\]\]").unwrap();
 
 		for capture in re.captures_iter(value) {
 			let tag_str = capture.get(0).unwrap().as_str();
@@ -79,7 +79,7 @@ impl NuttyTag {
 			}
 		}
 
-		Ok(tags)
+		tags
 	}
 
 	/// Get the Nutty ID.
@@ -206,25 +206,25 @@ mod tests {
 	#[test]
 	fn test_parse_all() {
 		// Test empty string.
-		let tags = NuttyTag::parse_all("").unwrap();
+		let tags = NuttyTag::parse_all("");
 		assert!(tags.is_empty());
 
 		// Test single valid tag.
-		let tags = NuttyTag::parse_all("[[abcdefg]]").unwrap();
+		let tags = NuttyTag::parse_all("[[abcdefg]]");
 		assert_eq!(tags.len(), 1);
 		assert_eq!(tags[0].nutty_id().nid(), "abcdefg");
 		assert_eq!(tags[0].display_text(), None);
 
 		// Test multiple valid tags.
-		let tags = NuttyTag::parse_all("[[abcdefg]] [[1234567|Display Text]]").unwrap();
+		let tags = NuttyTag::parse_all("[[abcdefg]] [[1234567|Display Text]]");
 		assert_eq!(tags.len(), 2);
 		assert_eq!(tags[0].nutty_id().nid(), "abcdefg");
 		assert_eq!(tags[0].display_text(), None);
 		assert_eq!(tags[1].nutty_id().nid(), "1234567");
 		assert_eq!(tags[1].display_text(), Some("Display Text"));
 
-		let tags = // Test mixed content with invalid tags.
-			NuttyTag::parse_all("Hello [[abcdefg]] World [[invalid]] [[1234567|Display]]").unwrap();
+		// Test mixed content with invalid tags.
+		let tags = NuttyTag::parse_all("Hello [[abcdefg]] World [[invalid]] [[1234567|Display]]");
 		assert_eq!(tags.len(), 2);
 		assert_eq!(tags[0].nutty_id().nid(), "abcdefg");
 		assert_eq!(tags[0].display_text(), None);
@@ -232,11 +232,11 @@ mod tests {
 		assert_eq!(tags[1].display_text(), Some("Display"));
 
 		// Test nested tags (should be treated as invalid).
-		let tags = NuttyTag::parse_all("[[abcdefg[[1234567]]]]").unwrap();
+		let tags = NuttyTag::parse_all("[[abcdefg[[1234567]]]]");
 		assert!(tags.is_empty());
 
 		// Test tags with whitespace.
-		let tags = NuttyTag::parse_all("  [[  abcdefg  ]] & [[  1234567  |  Display  ]]  ").unwrap();
+		let tags = NuttyTag::parse_all("  [[  abcdefg  ]] & [[  1234567  |  Display  ]]  ");
 		assert_eq!(tags.len(), 2);
 		assert_eq!(tags[0].nutty_id().nid(), "abcdefg");
 		assert_eq!(tags[0].display_text(), None);
@@ -305,7 +305,7 @@ mod tests {
 			}
 
 			// Parse all tags.
-			let tags = NuttyTag::parse_all(&text).unwrap();
+			let tags = NuttyTag::parse_all(&text);
 
 			// Verify each tag.
 			for (tag, (id, display)) in tags.iter().zip(ids.iter().zip(displays.iter())) {
