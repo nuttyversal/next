@@ -1,6 +1,3 @@
-pub mod postgres;
-pub mod tests;
-pub mod traits;
+pub mod content;
 
-pub use postgres::PostgresContentRepository;
-pub use traits::ContentRepository;
+pub use content::ContentRepository;
