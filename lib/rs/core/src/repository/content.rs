@@ -236,7 +236,7 @@ impl ContentRepository {
 				SELECT EXISTS (
 					SELECT 1 FROM links
 					WHERE source_id = $1 AND target_id = $2
-				) as "exists!"
+				) AS "exists!"
 			"#,
 			source_id.uuid(),
 			target_id.uuid()
