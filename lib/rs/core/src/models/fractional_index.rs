@@ -11,16 +11,6 @@ use thiserror::Error;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FractionalIndex(String);
 
-/// Errors that can occur when working with fractional indices.
-#[derive(Debug, Error)]
-pub enum FractionalIndexError {
-	#[error("Invalid character in index: {0}")]
-	InvalidCharacter(char),
-
-	#[error("Cannot generate index between identical indices")]
-	IdenticalIndices,
-}
-
 impl FractionalIndex {
 	/// The minimum character value used in base-94 encoding.
 	const MIN_CHAR: u8 = 33; // Exclamation mark (!)
@@ -153,6 +143,16 @@ impl Ord for FractionalIndex {
 		self_padded.cmp(&other_padded)
 	}
 }
+
+#[derive(Debug, Error)]
+pub enum FractionalIndexError {
+	#[error("Invalid character in index: {0}")]
+	InvalidCharacter(char),
+
+	#[error("Cannot generate index between identical indices")]
+	IdenticalIndices,
+}
+
 
 #[cfg(test)]
 mod tests {

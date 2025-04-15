@@ -12,7 +12,7 @@ pub struct ContentBlock {
 
 impl ContentBlock {
 	/// Create a new content block.
-	pub fn new(
+	fn new(
 		nutty_id: NuttyId,
 		parent_id: Option<NuttyId>,
 		content: BlockContent,
@@ -37,21 +37,30 @@ impl ContentBlock {
 	}
 
 	/// Serialize content to a JSON value.
-	pub fn serialize_content(&self) -> Result<serde_json::Value, serde_json::Error> {
-		serde_json::to_value(self.content.clone())
+	pub fn serialize_content(&self) -> Result<serde_json::Value, ContentBlockError> {
+		serde_json::to_value(self.content.clone()).map_err(ContentBlockError::SerializationError)
 	}
 
 	/// Deserialize content from a JSON value.
 	pub fn deserialize_content(
 		content: serde_json::Value,
-	) -> Result<BlockContent, serde_json::Error> {
-		serde_json::from_value(content)
+	) -> Result<BlockContent, ContentBlockError> {
+		serde_json::from_value(content).map_err(ContentBlockError::DeserializationError)
 	}
 
 	/// Create a builder for a new content block.
 	pub fn builder() -> ContentBlockBuilder {
 		ContentBlockBuilder::default()
 	}
+}
+
+#[derive(Debug, Error)]
+pub enum ContentBlockError {
+	#[error("SerializationError: {0}")]
+	SerializationError(serde_json::Error),
+
+	#[error("DeserializationError: {0}")]
+	DeserializationError(serde_json::Error),
 }
 
 /// A builder for creating new content blocks.
@@ -89,19 +98,20 @@ impl ContentBlockBuilder {
 	}
 
 	/// Build the content block, returning an error if required fields are not set.
-	pub fn try_build(self) -> Result<ContentBlock, ContentBlockError> {
-		Ok(ContentBlock {
-			nutty_id: self.nutty_id.unwrap_or_else(NuttyId::now),
-			parent_id: self.parent_id,
-			content: self.content.ok_or(ContentBlockError::MissingContent)?,
-			index: self.index.ok_or(ContentBlockError::MissingIndex)?,
-		})
+	pub fn try_build(self) -> Result<ContentBlock, ContentBlockBuilderError> {
+		let nutty_id = self.nutty_id.unwrap_or_else(NuttyId::now);
+		let parent_id = self.parent_id;
+		let content = self
+			.content
+			.ok_or(ContentBlockBuilderError::MissingContent)?;
+		let index = self.index.ok_or(ContentBlockBuilderError::MissingIndex)?;
+
+		Ok(ContentBlock::new(nutty_id, parent_id, content, index))
 	}
 }
 
-/// Errors that can occur when building a content block.
 #[derive(Debug, Error)]
-pub enum ContentBlockError {
+pub enum ContentBlockBuilderError {
 	#[error("Content is required")]
 	MissingContent,
 

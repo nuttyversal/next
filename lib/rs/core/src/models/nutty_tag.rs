@@ -1,6 +1,9 @@
-use crate::models::AnyNuttyId;
 use regex::Regex;
 use std::fmt;
+use thiserror::Error;
+
+use crate::models::AnyNuttyId;
+use crate::models::nutty_id::NuttyIdError;
 
 /// A NuttyTag represents a wikilink-style tag containing a Nutty ID.
 ///
@@ -23,10 +26,10 @@ impl NuttyTag {
 	}
 
 	/// Parse a tag string like [[abcdefg]] or [[abcdefg|Display Text]].
-	pub fn parse(value: &str) -> Result<Self, String> {
+	pub fn parse(value: &str) -> Result<Self, NuttyTagError> {
 		// Check for opening and closing brackets.
 		if !value.starts_with("[[") || !value.ends_with("]]") {
-			return Err(format!("Invalid NuttyTag format: '{}'", value));
+			return Err(NuttyTagError::MissingBrackets(value.to_string()));
 		}
 
 		// Strip the opening and closing brackets.
@@ -60,7 +63,7 @@ impl NuttyTag {
 			}
 
 			// Format: (╯‵Д′)╯彡┻━┻
-			_ => Err(format!("Invalid NuttyTag format: '{}'", value)),
+			_ => Err(NuttyTagError::InvalidTag(value.to_string())),
 		}
 	}
 
@@ -103,11 +106,23 @@ impl fmt::Display for NuttyTag {
 }
 
 impl TryFrom<&str> for NuttyTag {
-	type Error = String;
+	type Error = NuttyTagError;
 
 	fn try_from(value: &str) -> Result<Self, Self::Error> {
 		Self::parse(value)
 	}
+}
+
+#[derive(Debug, Error)]
+pub enum NuttyTagError {
+	#[error("Missing surrounding [[ and ]]: {0}")]
+	MissingBrackets(String),
+
+	#[error("Invalid tag format: '{0}'")]
+	InvalidTag(String),
+
+	#[error("Invalid Nutty ID: {0}")]
+	InvalidNuttyId(#[from] NuttyIdError),
 }
 
 #[cfg(test)]
@@ -178,13 +193,6 @@ mod tests {
 		assert!(NuttyTag::try_from("abcdefg]]").is_err());
 		assert!(NuttyTag::try_from("[[]]").is_err());
 		assert!(NuttyTag::try_from("[[abcdef0]]").is_err());
-
-		// Test error messages.
-		let err = NuttyTag::try_from("abcdefg").unwrap_err();
-		assert!(err.contains("Invalid NuttyTag format"));
-
-		let err = NuttyTag::try_from("[[abcdef0]]").unwrap_err();
-		assert!(err.contains("Invalid Nutty ID format"));
 	}
 
 	#[test]

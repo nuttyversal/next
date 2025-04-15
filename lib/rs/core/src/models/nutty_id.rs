@@ -1,6 +1,7 @@
 use proptest::prelude::Strategy;
 use sqlx::types::Uuid;
 use std::cmp::Ordering;
+use thiserror::Error;
 
 /// A Nutty ID is a newtype wrapper around a UUID.
 ///
@@ -59,14 +60,14 @@ pub struct DissociatedNuttyId {
 
 impl DissociatedNuttyId {
 	/// Create a new Nutty ID from a string slice.
-	pub fn new(nid: &str) -> Result<Self, String> {
+	pub fn new(nid: &str) -> Result<Self, NuttyIdError> {
 		if !is_valid_nutty_id(nid) {
-			return Err(format!("Invalid Nutty ID format: '{}'", nid));
+			return Err(NuttyIdError::ValidationError(nid.to_string()));
 		}
 
 		let nid_bytes: [u8; 7] = match nid.as_bytes().try_into() {
 			Ok(bytes) => bytes,
-			Err(_) => return Err(format!("Failed to convert '{}' to 7 bytes", nid)),
+			Err(_) => return Err(NuttyIdError::ConversionError(nid.to_string())),
 		};
 
 		Ok(Self { nid: nid_bytes })
@@ -97,7 +98,7 @@ pub enum AnyNuttyId {
 
 impl AnyNuttyId {
 	/// Create a new Nutty ID from a string slice.
-	pub fn new(nid: &str) -> Result<Self, String> {
+	pub fn new(nid: &str) -> Result<Self, NuttyIdError> {
 		match DissociatedNuttyId::new(nid) {
 			Ok(dissociated) => Ok(AnyNuttyId::Dissociated(dissociated)),
 			Err(e) => Err(e),
@@ -200,6 +201,15 @@ fn encode_base_58(value: u64) -> String {
 	}
 
 	result
+}
+
+#[derive(Debug, Error)]
+pub enum NuttyIdError {
+	#[error("Failed to convert '{0}' to 7 bytes")]
+	ConversionError(String),
+
+	#[error("Invalid Nutty ID format: '{0}'")]
+	ValidationError(String),
 }
 
 // A proptest strategy for generating valid Nutty IDs.

@@ -1,6 +1,8 @@
 use sqlx::Postgres;
+use thiserror::Error;
 
-use crate::errors::ApiError;
+use crate::models::content_block::{ContentBlockBuilderError, ContentBlockError};
+use crate::models::fractional_index::FractionalIndexError;
 use crate::models::{AnyNuttyId, ContentBlock, ContentLink, FractionalIndex, NuttyId};
 
 /// A repository for content blocks.
@@ -20,7 +22,7 @@ impl ContentRepository {
 	pub async fn get_content_block(
 		&self,
 		nutty_id: &AnyNuttyId,
-	) -> Result<Option<ContentBlock>, ApiError> {
+	) -> Result<Option<ContentBlock>, ContentRepositoryError> {
 		// Find the content block.
 		let record = sqlx::query!(
 			r#"
@@ -39,10 +41,16 @@ impl ContentRepository {
 				let nutty_id = NuttyId::new(record.id);
 				let parent_id = record.parent_id.map(NuttyId::new);
 				let content = ContentBlock::deserialize_content(record.content)?;
-				let index_result = FractionalIndex::new(record.index);
-				let index = index_result.map_err(|e| ApiError::InvalidIndex(e.to_string()))?;
+				let index = FractionalIndex::new(record.index)?;
 
-				Ok(Some(ContentBlock::new(nutty_id, parent_id, content, index)))
+				Ok(Some(
+					ContentBlock::builder()
+						.nutty_id(nutty_id)
+						.parent_id(parent_id)
+						.content(content)
+						.index(index)
+						.try_build()?,
+				))
 			}
 
 			// It does not exist…
@@ -54,7 +62,7 @@ impl ContentRepository {
 	pub async fn upsert_content_block(
 		&self,
 		content_block: ContentBlock,
-	) -> Result<ContentBlock, ApiError> {
+	) -> Result<ContentBlock, ContentRepositoryError> {
 		// Upsert the content block.
 		let record = sqlx::query!(
 			r#"
@@ -77,14 +85,21 @@ impl ContentRepository {
 		let nutty_id = NuttyId::new(record.id);
 		let parent_id = record.parent_id.map(NuttyId::new);
 		let content = ContentBlock::deserialize_content(record.content)?;
-		let index_result = FractionalIndex::new(record.index);
-		let index = index_result.map_err(|e| ApiError::InvalidIndex(e.to_string()))?;
+		let index = FractionalIndex::new(record.index)?;
 
-		Ok(ContentBlock::new(nutty_id, parent_id, content, index))
+		Ok(ContentBlock::builder()
+			.nutty_id(nutty_id)
+			.parent_id(parent_id)
+			.content(content)
+			.index(index)
+			.try_build()?)
 	}
 
 	/// Delete a block of content by its identifier.
-	pub async fn delete_content_block(&self, nutty_id: &AnyNuttyId) -> Result<(), ApiError> {
+	pub async fn delete_content_block(
+		&self,
+		nutty_id: &AnyNuttyId,
+	) -> Result<(), ContentRepositoryError> {
 		sqlx::query!(
 			r#"
 				DELETE FROM blocks
@@ -102,7 +117,7 @@ impl ContentRepository {
 	pub async fn get_content_link(
 		&self,
 		nutty_id: &AnyNuttyId,
-	) -> Result<Option<ContentLink>, ApiError> {
+	) -> Result<Option<ContentLink>, ContentRepositoryError> {
 		// Find the content link.
 		let record = sqlx::query!(
 			r#"
@@ -132,7 +147,7 @@ impl ContentRepository {
 	pub async fn get_content_links_from(
 		&self,
 		nutty_id: &NuttyId,
-	) -> Result<Vec<ContentLink>, ApiError> {
+	) -> Result<Vec<ContentLink>, ContentRepositoryError> {
 		let records = sqlx::query!(
 			r#"
 				SELECT id, source_id, target_id
@@ -160,7 +175,7 @@ impl ContentRepository {
 	pub async fn get_content_links_to(
 		&self,
 		nutty_id: &NuttyId,
-	) -> Result<Vec<ContentLink>, ApiError> {
+	) -> Result<Vec<ContentLink>, ContentRepositoryError> {
 		let records = sqlx::query!(
 			r#"
 				SELECT id, source_id, target_id
@@ -185,7 +200,10 @@ impl ContentRepository {
 	}
 
 	/// Upsert a content link between two content blocks.
-	pub async fn upsert_content_link(&self, link: ContentLink) -> Result<ContentLink, ApiError> {
+	pub async fn upsert_content_link(
+		&self,
+		link: ContentLink,
+	) -> Result<ContentLink, ContentRepositoryError> {
 		// Insert the content link.
 		let record = sqlx::query!(
 			r#"
@@ -211,7 +229,10 @@ impl ContentRepository {
 	}
 
 	/// Delete a content link between two content blocks.
-	pub async fn delete_content_link(&self, link: ContentLink) -> Result<(), ApiError> {
+	pub async fn delete_content_link(
+		&self,
+		link: ContentLink,
+	) -> Result<(), ContentRepositoryError> {
 		sqlx::query!(
 			r#"
 				DELETE FROM links
@@ -230,7 +251,7 @@ impl ContentRepository {
 		&self,
 		source_id: &NuttyId,
 		target_id: &NuttyId,
-	) -> Result<bool, ApiError> {
+	) -> Result<bool, ContentRepositoryError> {
 		let record = sqlx::query!(
 			r#"
 				SELECT EXISTS (
@@ -246,6 +267,21 @@ impl ContentRepository {
 
 		Ok(record.exists)
 	}
+}
+
+#[derive(Debug, Error)]
+pub enum ContentRepositoryError {
+	#[error("Unable to query content blocks: {0}")]
+	QueryFailed(#[from] sqlx::error::Error),
+
+	#[error("Invalid content block builder state: {0}")]
+	InvalidContentBlockBuilder(#[from] ContentBlockBuilderError),
+
+	#[error("Invalid content block: {0}")]
+	InvalidContentBlock(#[from] ContentBlockError),
+
+	#[error("Invalid index: {0}")]
+	InvalidFractionalIndex(#[from] FractionalIndexError),
 }
 
 #[cfg(test)]
@@ -305,14 +341,15 @@ mod tests {
 		assert!(matches!(retrieved.content, BlockContent::Page { title } if title == "Test Page"));
 
 		// Act: Update the content block.
-		let updated_block = ContentBlock::new(
-			*test_block.nutty_id(),
-			test_block.parent_id,
-			BlockContent::Page {
+		let updated_block = ContentBlock::builder()
+			.nutty_id(*test_block.nutty_id())
+			.parent_id(test_block.parent_id)
+			.content(BlockContent::Page {
 				title: "Updated Page".to_string(),
-			},
-			test_block.index.clone(),
-		);
+			})
+			.index(test_block.index.clone())
+			.try_build()
+			.unwrap();
 
 		let updated = repo
 			.upsert_content_block(updated_block)
