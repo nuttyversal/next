@@ -6,8 +6,8 @@ use thiserror::Error;
 pub struct ContentBlock {
 	nutty_id: NuttyId,
 	pub parent_id: Option<NuttyId>,
+	pub f_index: FractionalIndex,
 	pub content: BlockContent,
-	pub index: FractionalIndex,
 }
 
 impl ContentBlock {
@@ -15,20 +15,20 @@ impl ContentBlock {
 	fn new(
 		nutty_id: NuttyId,
 		parent_id: Option<NuttyId>,
+		f_index: FractionalIndex,
 		content: BlockContent,
-		index: FractionalIndex,
 	) -> Self {
 		Self {
 			nutty_id,
 			parent_id,
+			f_index,
 			content,
-			index,
 		}
 	}
 
 	/// Create a new content block with a generated identifier (UUIDv7).
-	pub fn now(parent_id: Option<NuttyId>, content: BlockContent, index: FractionalIndex) -> Self {
-		Self::new(NuttyId::now(), parent_id, content, index)
+	pub fn now(parent_id: Option<NuttyId>, f_index: FractionalIndex, content: BlockContent) -> Self {
+		Self::new(NuttyId::now(), parent_id, f_index, content)
 	}
 
 	/// Get the Nutty ID.
@@ -68,8 +68,8 @@ pub enum ContentBlockError {
 pub struct ContentBlockBuilder {
 	nutty_id: Option<NuttyId>,
 	parent_id: Option<NuttyId>,
+	f_index: Option<FractionalIndex>,
 	content: Option<BlockContent>,
-	index: Option<FractionalIndex>,
 }
 
 impl ContentBlockBuilder {
@@ -85,15 +85,15 @@ impl ContentBlockBuilder {
 		self
 	}
 
-	/// Set the block content.
-	pub fn content(mut self, content: BlockContent) -> Self {
-		self.content = Some(content);
+	/// Set the fractional index.
+	pub fn f_index(mut self, f_index: FractionalIndex) -> Self {
+		self.f_index = Some(f_index);
 		self
 	}
 
-	/// Set the positional index.
-	pub fn index(mut self, index: FractionalIndex) -> Self {
-		self.index = Some(index);
+	/// Set the block content.
+	pub fn content(mut self, content: BlockContent) -> Self {
+		self.content = Some(content);
 		self
 	}
 
@@ -101,12 +101,12 @@ impl ContentBlockBuilder {
 	pub fn try_build(self) -> Result<ContentBlock, ContentBlockBuilderError> {
 		let nutty_id = self.nutty_id.unwrap_or_else(NuttyId::now);
 		let parent_id = self.parent_id;
+		let f_index = self.f_index.ok_or(ContentBlockBuilderError::MissingIndex)?;
 		let content = self
 			.content
 			.ok_or(ContentBlockBuilderError::MissingContent)?;
-		let index = self.index.ok_or(ContentBlockBuilderError::MissingIndex)?;
 
-		Ok(ContentBlock::new(nutty_id, parent_id, content, index))
+		Ok(ContentBlock::new(nutty_id, parent_id, f_index, content))
 	}
 }
 

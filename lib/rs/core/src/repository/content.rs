@@ -26,8 +26,8 @@ impl ContentRepository {
 		// Find the content block.
 		let record = sqlx::query!(
 			r#"
-				SELECT id, parent_id, content, index
-				FROM blocks
+				SELECT id, parent_id, f_index, content
+				FROM content.blocks
 				WHERE nutty_id = $1
 			"#,
 			nutty_id.nid()
@@ -40,15 +40,15 @@ impl ContentRepository {
 			Some(record) => {
 				let nutty_id = NuttyId::new(record.id);
 				let parent_id = record.parent_id.map(NuttyId::new);
+				let f_index = FractionalIndex::new(record.f_index)?;
 				let content = ContentBlock::deserialize_content(record.content)?;
-				let index = FractionalIndex::new(record.index)?;
 
 				Ok(Some(
 					ContentBlock::builder()
 						.nutty_id(nutty_id)
 						.parent_id(parent_id)
+						.f_index(f_index)
 						.content(content)
-						.index(index)
 						.try_build()?,
 				))
 			}
@@ -66,17 +66,17 @@ impl ContentRepository {
 		// Upsert the content block.
 		let record = sqlx::query!(
 			r#"
-				INSERT INTO blocks (id, nutty_id, parent_id, content, index)
+				INSERT INTO content.blocks (id, nutty_id, parent_id, f_index, content)
 				VALUES ($1, $2, $3, $4, $5)
 				ON CONFLICT (id) DO UPDATE
-				SET parent_id = EXCLUDED.parent_id, content = EXCLUDED.content, index = EXCLUDED.index
-				RETURNING id, nutty_id, parent_id, content, index
+				SET parent_id = EXCLUDED.parent_id, content = EXCLUDED.content, f_index = EXCLUDED.f_index
+				RETURNING id, nutty_id, parent_id, f_index, content
 			"#,
 			content_block.nutty_id().uuid(),
 			content_block.nutty_id().nid(),
 			content_block.parent_id.clone().map(|id| id.uuid().clone()),
+			content_block.f_index.as_str(),
 			content_block.serialize_content()?,
-			content_block.index.as_str(),
 		)
 		.fetch_one(&self.pool)
 		.await?;
@@ -84,14 +84,14 @@ impl ContentRepository {
 		// Get the updated content block.
 		let nutty_id = NuttyId::new(record.id);
 		let parent_id = record.parent_id.map(NuttyId::new);
+		let f_index = FractionalIndex::new(record.f_index)?;
 		let content = ContentBlock::deserialize_content(record.content)?;
-		let index = FractionalIndex::new(record.index)?;
 
 		Ok(ContentBlock::builder()
 			.nutty_id(nutty_id)
 			.parent_id(parent_id)
+			.f_index(f_index)
 			.content(content)
-			.index(index)
 			.try_build()?)
 	}
 
@@ -102,7 +102,7 @@ impl ContentRepository {
 	) -> Result<(), ContentRepositoryError> {
 		sqlx::query!(
 			r#"
-				DELETE FROM blocks
+				DELETE FROM content.blocks
 				WHERE nutty_id = $1
 			"#,
 			nutty_id.nid()
@@ -122,7 +122,7 @@ impl ContentRepository {
 		let record = sqlx::query!(
 			r#"
 				SELECT id, source_id, target_id
-				FROM links
+				FROM content.links
 				WHERE nutty_id = $1
 			"#,
 			nutty_id.nid()
@@ -151,7 +151,7 @@ impl ContentRepository {
 		let records = sqlx::query!(
 			r#"
 				SELECT id, source_id, target_id
-				FROM links
+				FROM content.links
 				WHERE source_id = $1
 			"#,
 			nutty_id.uuid()
@@ -179,7 +179,7 @@ impl ContentRepository {
 		let records = sqlx::query!(
 			r#"
 				SELECT id, source_id, target_id
-				FROM links
+				FROM content.links
 				WHERE target_id = $1
 			"#,
 			nutty_id.uuid()
@@ -207,7 +207,7 @@ impl ContentRepository {
 		// Insert the content link.
 		let record = sqlx::query!(
 			r#"
-				INSERT INTO links (id, nutty_id, source_id, target_id)
+				INSERT INTO content.links (id, nutty_id, source_id, target_id)
 				VALUES ($1, $2, $3, $4)
 				ON CONFLICT (id) DO NOTHING
 				RETURNING id, nutty_id, source_id, target_id
@@ -235,7 +235,7 @@ impl ContentRepository {
 	) -> Result<(), ContentRepositoryError> {
 		sqlx::query!(
 			r#"
-				DELETE FROM links
+				DELETE FROM content.links
 				WHERE id = $1
 			"#,
 			link.nutty_id.uuid()
@@ -255,7 +255,7 @@ impl ContentRepository {
 		let record = sqlx::query!(
 			r#"
 				SELECT EXISTS (
-					SELECT 1 FROM links
+					SELECT 1 FROM content.links
 					WHERE source_id = $1 AND target_id = $2
 				) AS "exists!"
 			"#,
@@ -311,10 +311,10 @@ mod tests {
 		// Arrange: Create a test content block.
 		let test_block = ContentBlock::now(
 			None,
+			FractionalIndex::start(),
 			BlockContent::Page {
 				title: "Test Page".to_string(),
 			},
-			FractionalIndex::start(),
 		);
 
 		// Act: Save the test content block.
@@ -344,10 +344,10 @@ mod tests {
 		let updated_block = ContentBlock::builder()
 			.nutty_id(*test_block.nutty_id())
 			.parent_id(test_block.parent_id)
+			.f_index(test_block.f_index.clone())
 			.content(BlockContent::Page {
 				title: "Updated Page".to_string(),
 			})
-			.index(test_block.index.clone())
 			.try_build()
 			.unwrap();
 
@@ -384,18 +384,18 @@ mod tests {
 		// Arrange: Create test content blocks.
 		let source_block = ContentBlock::now(
 			None,
+			FractionalIndex::start(),
 			BlockContent::Page {
 				title: "Source Page".to_string(),
 			},
-			FractionalIndex::start(),
 		);
 
 		let target_block = ContentBlock::now(
 			None,
+			FractionalIndex::between(&source_block.f_index, &FractionalIndex::end()).unwrap(),
 			BlockContent::Page {
 				title: "Target Page".to_string(),
 			},
-			FractionalIndex::between(&source_block.index, &FractionalIndex::end()).unwrap(),
 		);
 
 		// Act: Save the content blocks.
