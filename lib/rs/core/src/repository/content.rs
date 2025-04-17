@@ -19,6 +19,43 @@ impl ContentRepository {
 		Self { pool }
 	}
 
+	/// Resolve a collection of [AnyNuttyId] into a Vec of [NuttyId].
+	pub async fn resolve_nutty_ids_tx<'e, 'i, E, I>(&self, executor: E, ids: I) -> Vec<NuttyId>
+	where
+		E: Executor<'e, Database = Postgres>,
+		I: IntoIterator<Item = &'i AnyNuttyId>,
+	{
+		// Collect Nutty IDs.
+		let nids: Vec<_> = ids.into_iter().map(|id| id.nid()).collect();
+
+		// Query the content blocks.
+		let resolved = sqlx::query!(
+			r#"
+				SELECT id, nutty_id
+				FROM content.blocks
+				WHERE nutty_id = ANY($1)
+			"#,
+			&nids,
+		)
+		.fetch_all(executor)
+		.await
+		.expect("Failed to resolve Nutty IDs");
+
+		// Map the results.
+		resolved
+			.into_iter()
+			.map(|record| NuttyId::new(record.id))
+			.collect()
+	}
+
+	/// Resolve a collection of [AnyNuttyId] into a Vec of [NuttyId].
+	pub async fn resolve_nutty_ids<'i, I>(&self, ids: I) -> Vec<NuttyId>
+	where
+		I: IntoIterator<Item = &'i AnyNuttyId>,
+	{
+		self.resolve_nutty_ids_tx(&self.pool, ids).await
+	}
+
 	/// Get a content block by its Nutty ID.
 	pub async fn get_content_block_tx<'e, E>(
 		&self,
@@ -408,7 +445,8 @@ mod tests {
 	use sqlx::{Pool, Postgres};
 
 	use crate::models::{
-		AnyNuttyId, BlockContent, ContentBlock, ContentLink, FractionalIndex, NuttyId,
+		AnyNuttyId, BlockContent, ContentBlock, ContentLink, DissociatedNuttyId, FractionalIndex,
+		NuttyId,
 	};
 	use crate::repository::ContentRepository;
 
@@ -622,5 +660,61 @@ mod tests {
 				.await
 				.expect("Failed to check link")
 		);
+	}
+
+	#[tokio::test]
+	async fn test_resolve_nutty_ids() {
+		// Arrange: Create a repository.
+		let pool = connect_to_test_database().await;
+		let repo = ContentRepository::new(pool);
+
+		// Arrange: Create test content blocks.
+		let block1 = ContentBlock::now(
+			None,
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Test Page 1".to_string(),
+			},
+		);
+
+		let block2 = ContentBlock::now(
+			None,
+			FractionalIndex::between(&block1.f_index, &FractionalIndex::end()).unwrap(),
+			BlockContent::Page {
+				title: "Test Page 2".to_string(),
+			},
+		);
+
+		// Act: Save the content blocks.
+		repo
+			.upsert_content_block(block1.clone())
+			.await
+			.expect("Failed to save block1");
+
+		repo
+			.upsert_content_block(block2.clone())
+			.await
+			.expect("Failed to save block2");
+
+		// Act: Create a mix of associated and dissociated IDs.
+		let ids = [
+			AnyNuttyId::Associated(*block1.nutty_id()),
+			AnyNuttyId::Dissociated(
+				DissociatedNuttyId::new(&block2.nutty_id().nid())
+					.expect("Failed to create dissociated ID"),
+			),
+			AnyNuttyId::Associated(NuttyId::now()),
+			AnyNuttyId::Dissociated(
+				DissociatedNuttyId::new("1111111").expect("Failed to create dissociated ID"),
+			),
+		];
+
+		// Act: Resolve the IDs.
+		let resolved = repo.resolve_nutty_ids(ids.iter()).await;
+
+		// Assert: Only the IDs that exist in the database are returned.
+		assert_eq!(resolved.len(), 2);
+		assert!(resolved.contains(block1.nutty_id()));
+		assert!(resolved.contains(block2.nutty_id()));
 	}
 }
