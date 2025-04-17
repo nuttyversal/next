@@ -1,9 +1,10 @@
-use sqlx::Postgres;
+use sqlx::{Executor, Postgres};
 use thiserror::Error;
 
 use crate::models::content_block::{ContentBlockBuilderError, ContentBlockError};
 use crate::models::fractional_index::FractionalIndexError;
 use crate::models::{AnyNuttyId, ContentBlock, ContentLink, FractionalIndex, NuttyId};
+use crate::repository::Repository;
 
 /// A repository for content blocks.
 /// Objects are stored in PostgreSQL.
@@ -19,10 +20,14 @@ impl ContentRepository {
 	}
 
 	/// Get a content block by its Nutty ID.
-	pub async fn get_content_block(
+	pub async fn get_content_block_tx<'e, E>(
 		&self,
+		executor: E,
 		nutty_id: &AnyNuttyId,
-	) -> Result<Option<ContentBlock>, ContentRepositoryError> {
+	) -> Result<Option<ContentBlock>, ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
 		// Find the content block.
 		let record = sqlx::query!(
 			r#"
@@ -32,7 +37,7 @@ impl ContentRepository {
 			"#,
 			nutty_id.nid()
 		)
-		.fetch_optional(&self.pool)
+		.fetch_optional(executor)
 		.await?;
 
 		match record {
@@ -58,11 +63,23 @@ impl ContentRepository {
 		}
 	}
 
-	/// Upsert a content block.
-	pub async fn upsert_content_block(
+	/// Get a content block by its Nutty ID.
+	pub async fn get_content_block(
 		&self,
+		nutty_id: &AnyNuttyId,
+	) -> Result<Option<ContentBlock>, ContentRepositoryError> {
+		self.get_content_block_tx(&self.pool, nutty_id).await
+	}
+
+	/// Upsert a content block.
+	pub async fn upsert_content_block_tx<'e, E>(
+		&self,
+		executor: E,
 		content_block: ContentBlock,
-	) -> Result<ContentBlock, ContentRepositoryError> {
+	) -> Result<ContentBlock, ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
 		// Upsert the content block.
 		let record = sqlx::query!(
 			r#"
@@ -78,7 +95,7 @@ impl ContentRepository {
 			content_block.f_index.as_str(),
 			content_block.serialize_content()?,
 		)
-		.fetch_one(&self.pool)
+		.fetch_one(executor)
 		.await?;
 
 		// Get the updated content block.
@@ -95,11 +112,25 @@ impl ContentRepository {
 			.try_build()?)
 	}
 
-	/// Delete a block of content by its identifier.
-	pub async fn delete_content_block(
+	/// Upsert a content block.
+	pub async fn upsert_content_block(
 		&self,
+		content_block: ContentBlock,
+	) -> Result<ContentBlock, ContentRepositoryError> {
+		self
+			.upsert_content_block_tx(&self.pool, content_block)
+			.await
+	}
+
+	/// Delete a block of content by its identifier.
+	pub async fn delete_content_block_tx<'e, E>(
+		&self,
+		executor: E,
 		nutty_id: &AnyNuttyId,
-	) -> Result<(), ContentRepositoryError> {
+	) -> Result<(), ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
 		sqlx::query!(
 			r#"
 				DELETE FROM content.blocks
@@ -107,17 +138,29 @@ impl ContentRepository {
 			"#,
 			nutty_id.nid()
 		)
-		.execute(&self.pool)
+		.execute(executor)
 		.await?;
 
 		Ok(())
 	}
 
-	/// Get a content link by its identifier.
-	pub async fn get_content_link(
+	/// Delete a block of content by its identifier.
+	pub async fn delete_content_block(
 		&self,
 		nutty_id: &AnyNuttyId,
-	) -> Result<Option<ContentLink>, ContentRepositoryError> {
+	) -> Result<(), ContentRepositoryError> {
+		self.delete_content_block_tx(&self.pool, nutty_id).await
+	}
+
+	/// Get a content link by its identifier.
+	pub async fn get_content_link_tx<'e, E>(
+		&self,
+		executor: E,
+		nutty_id: &AnyNuttyId,
+	) -> Result<Option<ContentLink>, ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
 		// Find the content link.
 		let record = sqlx::query!(
 			r#"
@@ -127,7 +170,7 @@ impl ContentRepository {
 			"#,
 			nutty_id.nid()
 		)
-		.fetch_optional(&self.pool)
+		.fetch_optional(executor)
 		.await?;
 
 		match record {
@@ -143,11 +186,23 @@ impl ContentRepository {
 		}
 	}
 
-	/// Get all content links from a content block.
-	pub async fn get_content_links_from(
+	/// Get a content link by its identifier.
+	pub async fn get_content_link(
 		&self,
+		nutty_id: &AnyNuttyId,
+	) -> Result<Option<ContentLink>, ContentRepositoryError> {
+		self.get_content_link_tx(&self.pool, nutty_id).await
+	}
+
+	/// Get all content links from a content block.
+	pub async fn get_content_links_from_tx<'e, E>(
+		&self,
+		executor: E,
 		nutty_id: &NuttyId,
-	) -> Result<Vec<ContentLink>, ContentRepositoryError> {
+	) -> Result<Vec<ContentLink>, ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
 		let records = sqlx::query!(
 			r#"
 				SELECT id, source_id, target_id
@@ -156,7 +211,47 @@ impl ContentRepository {
 			"#,
 			nutty_id.uuid()
 		)
-		.fetch_all(&self.pool)
+		.fetch_all(executor)
+		.await?;
+
+		Ok(records
+			.iter()
+			.map(|record| {
+				ContentLink::new(
+					NuttyId::new(record.id),
+					NuttyId::new(record.source_id),
+					NuttyId::new(record.target_id),
+				)
+			})
+			.collect())
+	}
+
+	/// Get all content links from a content block.
+	pub async fn get_content_links_from(
+		&self,
+		nutty_id: &NuttyId,
+	) -> Result<Vec<ContentLink>, ContentRepositoryError> {
+		self.get_content_links_from_tx(&self.pool, nutty_id).await
+	}
+
+	/// Get all content links to a content block.
+	pub async fn get_content_links_to_tx<'e, E>(
+		&self,
+		executor: E,
+		nutty_id: &NuttyId,
+	) -> Result<Vec<ContentLink>, ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
+		let records = sqlx::query!(
+			r#"
+				SELECT id, source_id, target_id
+				FROM content.links
+				WHERE target_id = $1
+			"#,
+			nutty_id.uuid()
+		)
+		.fetch_all(executor)
 		.await?;
 
 		Ok(records
@@ -176,34 +271,18 @@ impl ContentRepository {
 		&self,
 		nutty_id: &NuttyId,
 	) -> Result<Vec<ContentLink>, ContentRepositoryError> {
-		let records = sqlx::query!(
-			r#"
-				SELECT id, source_id, target_id
-				FROM content.links
-				WHERE target_id = $1
-			"#,
-			nutty_id.uuid()
-		)
-		.fetch_all(&self.pool)
-		.await?;
-
-		Ok(records
-			.iter()
-			.map(|record| {
-				ContentLink::new(
-					NuttyId::new(record.id),
-					NuttyId::new(record.source_id),
-					NuttyId::new(record.target_id),
-				)
-			})
-			.collect())
+		self.get_content_links_to_tx(&self.pool, nutty_id).await
 	}
 
 	/// Upsert a content link between two content blocks.
-	pub async fn upsert_content_link(
+	pub async fn upsert_content_link_tx<'e, E>(
 		&self,
+		executor: E,
 		link: ContentLink,
-	) -> Result<ContentLink, ContentRepositoryError> {
+	) -> Result<ContentLink, ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
 		// Insert the content link.
 		let record = sqlx::query!(
 			r#"
@@ -217,7 +296,7 @@ impl ContentRepository {
 			link.source_id.uuid(),
 			link.target_id.uuid()
 		)
-		.fetch_one(&self.pool)
+		.fetch_one(executor)
 		.await?;
 
 		// Get the updated content link.
@@ -228,11 +307,23 @@ impl ContentRepository {
 		Ok(ContentLink::new(nutty_id, source_id, target_id))
 	}
 
-	/// Delete a content link between two content blocks.
-	pub async fn delete_content_link(
+	/// Upsert a content link between two content blocks.
+	pub async fn upsert_content_link(
 		&self,
 		link: ContentLink,
-	) -> Result<(), ContentRepositoryError> {
+	) -> Result<ContentLink, ContentRepositoryError> {
+		self.upsert_content_link_tx(&self.pool, link).await
+	}
+
+	/// Delete a content link between two content blocks.
+	pub async fn delete_content_link_tx<'e, E>(
+		&self,
+		executor: E,
+		link: ContentLink,
+	) -> Result<(), ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
 		sqlx::query!(
 			r#"
 				DELETE FROM content.links
@@ -240,18 +331,30 @@ impl ContentRepository {
 			"#,
 			link.nutty_id.uuid()
 		)
-		.execute(&self.pool)
+		.execute(executor)
 		.await?;
 
 		Ok(())
 	}
 
-	/// Check if two content blocks are linked.
-	pub async fn is_linked(
+	/// Delete a content link between two content blocks.
+	pub async fn delete_content_link(
 		&self,
+		link: ContentLink,
+	) -> Result<(), ContentRepositoryError> {
+		self.delete_content_link_tx(&self.pool, link).await
+	}
+
+	/// Check if two content blocks are linked.
+	pub async fn is_linked_tx<'e, E>(
+		&self,
+		executor: E,
 		source_id: &NuttyId,
 		target_id: &NuttyId,
-	) -> Result<bool, ContentRepositoryError> {
+	) -> Result<bool, ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
 		let record = sqlx::query!(
 			r#"
 				SELECT EXISTS (
@@ -262,10 +365,25 @@ impl ContentRepository {
 			source_id.uuid(),
 			target_id.uuid()
 		)
-		.fetch_one(&self.pool)
+		.fetch_one(executor)
 		.await?;
 
 		Ok(record.exists)
+	}
+
+	/// Check if two content blocks are linked.
+	pub async fn is_linked(
+		&self,
+		source_id: &NuttyId,
+		target_id: &NuttyId,
+	) -> Result<bool, ContentRepositoryError> {
+		self.is_linked_tx(&self.pool, source_id, target_id).await
+	}
+}
+
+impl Repository for ContentRepository {
+	fn pool(&self) -> &sqlx::Pool<Postgres> {
+		&self.pool
 	}
 }
 
