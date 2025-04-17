@@ -352,6 +352,70 @@ impl ContentRepository {
 		self.upsert_content_link_tx(&self.pool, link).await
 	}
 
+	/// Upsert multiple content links.
+	pub async fn upsert_content_links_tx<'e, E>(
+		&self,
+		executor: E,
+		links: &[ContentLink],
+	) -> Result<Vec<ContentLink>, ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
+		// Prepare the data for the bulk insert.
+		let ids = links
+			.iter()
+			.map(|link| *link.nutty_id.uuid())
+			.collect::<Vec<_>>();
+		let nids = links
+			.iter()
+			.map(|link| link.nutty_id.nid())
+			.collect::<Vec<_>>();
+		let source_ids = links
+			.iter()
+			.map(|link| *link.source_id.uuid())
+			.collect::<Vec<_>>();
+		let target_ids = links
+			.iter()
+			.map(|link| *link.target_id.uuid())
+			.collect::<Vec<_>>();
+
+		// Execute the bulk insert.
+		let records = sqlx::query!(
+			r#"
+				INSERT INTO content.links (id, nutty_id, source_id, target_id)
+				SELECT * FROM UNNEST($1::uuid[], $2::text[], $3::uuid[], $4::uuid[])
+				ON CONFLICT (source_id, target_id) DO NOTHING
+				RETURNING id, nutty_id, source_id, target_id
+			"#,
+			&ids,
+			&nids,
+			&source_ids,
+			&target_ids,
+		)
+		.fetch_all(executor)
+		.await?;
+
+		// Map the results.
+		Ok(records
+			.into_iter()
+			.map(|record| {
+				ContentLink::new(
+					NuttyId::new(record.id),
+					NuttyId::new(record.source_id),
+					NuttyId::new(record.target_id),
+				)
+			})
+			.collect())
+	}
+
+	/// Upsert multiple content links.
+	pub async fn upsert_content_links(
+		&self,
+		links: &[ContentLink],
+	) -> Result<Vec<ContentLink>, ContentRepositoryError> {
+		self.upsert_content_links_tx(&self.pool, links).await
+	}
+
 	/// Delete a content link between two content blocks.
 	pub async fn delete_content_link_tx<'e, E>(
 		&self,
@@ -851,5 +915,99 @@ mod tests {
 				.await
 				.expect("Failed to check link 2")
 		);
+	}
+
+	#[tokio::test]
+	async fn test_upsert_content_links() {
+		// Arrange: Create a repository.
+		let pool = connect_to_test_database().await;
+		let repo = ContentRepository::new(pool);
+
+		// Arrange: Create test content blocks.
+		let source_block = ContentBlock::now(
+			None,
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Source Page".to_string(),
+			},
+		);
+
+		let target_block1 = ContentBlock::now(
+			None,
+			FractionalIndex::between(&source_block.f_index, &FractionalIndex::end()).unwrap(),
+			BlockContent::Page {
+				title: "Target Page 1".to_string(),
+			},
+		);
+
+		let target_block2 = ContentBlock::now(
+			None,
+			FractionalIndex::between(&target_block1.f_index, &FractionalIndex::end()).unwrap(),
+			BlockContent::Page {
+				title: "Target Page 2".to_string(),
+			},
+		);
+
+		// Act: Save the content blocks.
+		repo
+			.upsert_content_block(source_block.clone())
+			.await
+			.expect("Failed to save source block");
+
+		repo
+			.upsert_content_block(target_block1.clone())
+			.await
+			.expect("Failed to save target block 1");
+
+		repo
+			.upsert_content_block(target_block2.clone())
+			.await
+			.expect("Failed to save target block 2");
+
+		// Act: Create multiple content links.
+		let links = vec![
+			ContentLink::now(*source_block.nutty_id(), *target_block1.nutty_id()),
+			ContentLink::now(*source_block.nutty_id(), *target_block2.nutty_id()),
+		];
+
+		// Act: Save the links in bulk.
+		let saved_links = repo
+			.upsert_content_links(&links)
+			.await
+			.expect("Failed to save content links");
+
+		// Assert: The correct number of links were saved.
+		assert_eq!(saved_links.len(), 2);
+
+		// Assert: Each link was saved correctly.
+		for saved_link in saved_links {
+			assert_eq!(saved_link.source_id, *source_block.nutty_id());
+			assert!(
+				saved_link.target_id == *target_block1.nutty_id()
+					|| saved_link.target_id == *target_block2.nutty_id()
+			);
+		}
+
+		// Act: Try to save duplicate links (should be ignored due to unique constraint).
+		let duplicate_links = vec![
+			ContentLink::now(*source_block.nutty_id(), *target_block1.nutty_id()),
+			ContentLink::now(*source_block.nutty_id(), *target_block2.nutty_id()),
+		];
+
+		let saved_duplicates = repo
+			.upsert_content_links(&duplicate_links)
+			.await
+			.expect("Failed to save duplicate links");
+
+		// Assert: No new links were created.
+		assert_eq!(saved_duplicates.len(), 0);
+
+		// Assert: The original links still exist.
+		let links_from = repo
+			.get_content_links_from(source_block.nutty_id())
+			.await
+			.expect("Failed to get links from source block");
+
+		assert_eq!(links_from.len(), 2);
 	}
 }
