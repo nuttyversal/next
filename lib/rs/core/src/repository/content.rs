@@ -382,6 +382,45 @@ impl ContentRepository {
 		self.delete_content_link_tx(&self.pool, link).await
 	}
 
+	/// Delete content links orphaned from the source block.
+	pub async fn delete_orphaned_content_links_tx<'e, E>(
+		&self,
+		executor: E,
+		source_id: &NuttyId,
+		target_ids: &[NuttyId],
+	) -> Result<(), ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
+		sqlx::query!(
+			r#"
+				DELETE FROM content.links
+				WHERE source_id = $1
+				AND target_id <> ANY($2)
+			"#,
+			source_id.uuid(),
+			&target_ids
+				.iter()
+				.map(|id| id.uuid().clone())
+				.collect::<Vec<_>>()
+		)
+		.execute(executor)
+		.await?;
+
+		Ok(())
+	}
+
+	/// Delete content links orphaned from the source block.
+	pub async fn delete_orphaned_content_links(
+		&self,
+		source_id: &NuttyId,
+		target_ids: &[NuttyId],
+	) -> Result<(), ContentRepositoryError> {
+		self
+			.delete_orphaned_content_links_tx(&self.pool, source_id, target_ids)
+			.await
+	}
+
 	/// Check if two content blocks are linked.
 	pub async fn is_linked_tx<'e, E>(
 		&self,
@@ -716,5 +755,101 @@ mod tests {
 		assert_eq!(resolved.len(), 2);
 		assert!(resolved.contains(block1.nutty_id()));
 		assert!(resolved.contains(block2.nutty_id()));
+	}
+
+	#[tokio::test]
+	async fn test_delete_orphaned_content_links() {
+		// Arrange: Create a repository.
+		let pool = connect_to_test_database().await;
+		let repo = ContentRepository::new(pool);
+
+		// Arrange: Create test content blocks.
+		let source_block = ContentBlock::now(
+			None,
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Source Page".to_string(),
+			},
+		);
+
+		let target_block1 = ContentBlock::now(
+			None,
+			FractionalIndex::between(&source_block.f_index, &FractionalIndex::end()).unwrap(),
+			BlockContent::Page {
+				title: "Target Page 1".to_string(),
+			},
+		);
+
+		let target_block2 = ContentBlock::now(
+			None,
+			FractionalIndex::between(&target_block1.f_index, &FractionalIndex::end()).unwrap(),
+			BlockContent::Page {
+				title: "Target Page 2".to_string(),
+			},
+		);
+
+		// Act: Save the content blocks.
+		repo
+			.upsert_content_block(source_block.clone())
+			.await
+			.expect("Failed to save source block");
+
+		repo
+			.upsert_content_block(target_block1.clone())
+			.await
+			.expect("Failed to save target block 1");
+
+		repo
+			.upsert_content_block(target_block2.clone())
+			.await
+			.expect("Failed to save target block 2");
+
+		// Act: Create content links between the blocks.
+		let link1 = ContentLink::now(*source_block.nutty_id(), *target_block1.nutty_id());
+		let link2 = ContentLink::now(*source_block.nutty_id(), *target_block2.nutty_id());
+
+		repo
+			.upsert_content_link(link1.clone())
+			.await
+			.expect("Failed to create link 1");
+
+		repo
+			.upsert_content_link(link2.clone())
+			.await
+			.expect("Failed to create link 2");
+
+		// Assert: Both links exist initially.
+		assert!(
+			repo
+				.is_linked(source_block.nutty_id(), target_block1.nutty_id())
+				.await
+				.expect("Failed to check link 1")
+		);
+		assert!(
+			repo
+				.is_linked(source_block.nutty_id(), target_block2.nutty_id())
+				.await
+				.expect("Failed to check link 2")
+		);
+
+		// Act: Delete orphaned links, keeping only link1.
+		repo
+			.delete_orphaned_content_links(source_block.nutty_id(), &[*target_block1.nutty_id()])
+			.await
+			.expect("Failed to delete orphaned links");
+
+		// Assert: Only link1 remains.
+		assert!(
+			repo
+				.is_linked(source_block.nutty_id(), target_block1.nutty_id())
+				.await
+				.expect("Failed to check link 1")
+		);
+		assert!(
+			!repo
+				.is_linked(source_block.nutty_id(), target_block2.nutty_id())
+				.await
+				.expect("Failed to check link 2")
+		);
 	}
 }
