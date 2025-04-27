@@ -120,6 +120,12 @@ impl From<NuttyId> for AnyNuttyId {
 	}
 }
 
+impl From<&NuttyId> for AnyNuttyId {
+	fn from(nutty_id: &NuttyId) -> Self {
+		AnyNuttyId::Associated(*nutty_id)
+	}
+}
+
 impl From<DissociatedNuttyId> for AnyNuttyId {
 	fn from(nutty_id: DissociatedNuttyId) -> Self {
 		AnyNuttyId::Dissociated(nutty_id)

@@ -108,6 +108,132 @@ impl ContentRepository {
 		self.get_content_block_tx(&self.pool, nutty_id).await
 	}
 
+	/// Get all ancestors of a content block.
+	pub async fn get_ancestor_blocks_tx<'e, E>(
+		&self,
+		executor: E,
+		nutty_id: &AnyNuttyId,
+	) -> Result<Vec<ContentBlock>, ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
+		let records = sqlx::query!(
+			r#"
+				WITH RECURSIVE ancestors AS (
+					SELECT b.*, 0 AS level
+					FROM content.blocks b
+					WHERE b.nutty_id = $1
+					UNION ALL
+					SELECT p.*, a.level + 1 AS level
+					FROM content.blocks p
+					JOIN ancestors a ON p.id = a.parent_id
+				)
+				SELECT id, parent_id, f_index, content
+				FROM ancestors
+				WHERE level > 0
+				ORDER BY level;
+			"#,
+			nutty_id.nid()
+		)
+		.fetch_all(executor)
+		.await?;
+
+		let mut blocks = Vec::new();
+
+		for record in records {
+			if let (Some(id), Some(f_index), Some(content)) =
+				(record.id, record.f_index, record.content)
+			{
+				let nutty_id = NuttyId::new(id);
+				let parent_id = record.parent_id.map(NuttyId::new);
+				let f_index = FractionalIndex::new(f_index)?;
+				let content = ContentBlock::deserialize_content(content)?;
+
+				blocks.push(
+					ContentBlock::builder()
+						.nutty_id(nutty_id)
+						.parent_id(parent_id)
+						.f_index(f_index)
+						.content(content)
+						.try_build()?,
+				);
+			}
+		}
+
+		Ok(blocks)
+	}
+
+	/// Get all ancestors of a content block.
+	pub async fn get_ancestor_blocks(
+		&self,
+		nutty_id: &AnyNuttyId,
+	) -> Result<Vec<ContentBlock>, ContentRepositoryError> {
+		self.get_ancestor_blocks_tx(&self.pool, nutty_id).await
+	}
+
+	/// Get all descendants of a content block.
+	pub async fn get_descendant_blocks_tx<'e, E>(
+		&self,
+		executor: E,
+		nutty_id: &AnyNuttyId,
+	) -> Result<Vec<ContentBlock>, ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
+		let records = sqlx::query!(
+			r#"
+				WITH RECURSIVE descendants AS (
+					SELECT b.*, 0 AS level
+					FROM content.blocks b
+					WHERE b.nutty_id = $1
+					UNION ALL
+					SELECT c.*, d.level + 1 AS level
+					FROM content.blocks c
+					JOIN descendants d ON c.parent_id = d.id
+				)
+				SELECT id, parent_id, f_index, content
+				FROM descendants
+				WHERE level > 0
+				ORDER BY level;
+			"#,
+			nutty_id.nid()
+		)
+		.fetch_all(executor)
+		.await?;
+
+		let mut blocks = Vec::new();
+
+		for record in records {
+			if let (Some(id), Some(f_index), Some(content)) =
+				(record.id, record.f_index, record.content)
+			{
+				let nutty_id = NuttyId::new(id);
+				let parent_id = record.parent_id.map(NuttyId::new);
+				let f_index = FractionalIndex::new(f_index)?;
+				let content = ContentBlock::deserialize_content(content)?;
+
+				blocks.push(
+					ContentBlock::builder()
+						.nutty_id(nutty_id)
+						.parent_id(parent_id)
+						.f_index(f_index)
+						.content(content)
+						.try_build()?,
+				);
+			}
+		}
+
+		Ok(blocks)
+	}
+
+	/// Get all descendants of a content block.
+	pub async fn get_descendant_blocks(
+		&self,
+		nutty_id: &AnyNuttyId,
+	) -> Result<Vec<ContentBlock>, ContentRepositoryError> {
+		self.get_descendant_blocks_tx(&self.pool, nutty_id).await
+	}
+
 	/// Upsert a content block.
 	pub async fn upsert_content_block_tx<'e, E>(
 		&self,
@@ -1009,5 +1135,222 @@ mod tests {
 			.expect("Failed to get links from source block");
 
 		assert_eq!(links_from.len(), 2);
+	}
+
+	#[tokio::test]
+	async fn test_get_ancestor_blocks() {
+		// Arrange: Create a repository.
+		let pool = connect_to_test_database().await;
+		let repo = ContentRepository::new(pool);
+
+		// Arrange: Create a hierarchy of content blocks.
+		let parent_block = ContentBlock::now(
+			None,
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Parent Page".to_string(),
+			},
+		);
+
+		let child_block = ContentBlock::now(
+			Some(*parent_block.nutty_id()),
+			FractionalIndex::between(&FractionalIndex::start(), &FractionalIndex::end()).unwrap(),
+			BlockContent::Page {
+				title: "Child Page".to_string(),
+			},
+		);
+
+		let grandchild_block = ContentBlock::now(
+			Some(*child_block.nutty_id()),
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Grandchild Page".to_string(),
+			},
+		);
+
+		// Act: Save the content blocks.
+		repo
+			.upsert_content_block(parent_block.clone())
+			.await
+			.expect("Failed to save parent block");
+
+		repo
+			.upsert_content_block(child_block.clone())
+			.await
+			.expect("Failed to save child block");
+
+		repo
+			.upsert_content_block(grandchild_block.clone())
+			.await
+			.expect("Failed to save grandchild block");
+
+		// Act: Get the ancestors of the grandchild block.
+		let grandchild_ancestors = repo
+			.get_ancestor_blocks(&grandchild_block.nutty_id().into())
+			.await
+			.expect("Failed to get ancestors of grandchild");
+
+		// Assert: The ancestors include the parent and child blocks.
+		assert_eq!(grandchild_ancestors.len(), 2);
+		assert!(
+			grandchild_ancestors
+				.iter()
+				.any(|block| block.nutty_id() == parent_block.nutty_id())
+		);
+		assert!(
+			grandchild_ancestors
+				.iter()
+				.any(|block| block.nutty_id() == child_block.nutty_id())
+		);
+
+		// Act: Get the ancestors of the child block.
+		let child_ancestors = repo
+			.get_ancestor_blocks(&child_block.nutty_id().into())
+			.await
+			.expect("Failed to get ancestors of child");
+
+		// Assert: The ancestors include only the parent block.
+		assert_eq!(child_ancestors.len(), 1);
+		assert!(
+			child_ancestors
+				.iter()
+				.any(|block| block.nutty_id() == parent_block.nutty_id())
+		);
+
+		// Act: Get the ancestors of the parent block (which has no ancestors).
+		let parent_ancestors = repo
+			.get_ancestor_blocks(&parent_block.nutty_id().into())
+			.await
+			.expect("Failed to get ancestors of parent");
+
+		// Assert: There are no ancestors.
+		assert_eq!(parent_ancestors.len(), 0);
+
+		// Act: Get the ancestors of a non-existent block.
+		let non_existent_block = AnyNuttyId::Associated(NuttyId::now());
+		let non_existent_ancestors = repo
+			.get_ancestor_blocks(&non_existent_block)
+			.await
+			.expect("Failed to get ancestors of non-existent block");
+
+		// Assert: There are no ancestors.
+		assert_eq!(non_existent_ancestors.len(), 0);
+	}
+
+	#[tokio::test]
+	async fn test_get_descendant_blocks() {
+		// Arrange: Create a repository.
+		let pool = connect_to_test_database().await;
+		let repo = ContentRepository::new(pool);
+
+		// Arrange: Create a hierarchy of content blocks.
+		let parent_block = ContentBlock::now(
+			None,
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Parent Page".to_string(),
+			},
+		);
+
+		let child_block1 = ContentBlock::now(
+			Some(*parent_block.nutty_id()),
+			FractionalIndex::between(&FractionalIndex::start(), &FractionalIndex::end()).unwrap(),
+			BlockContent::Page {
+				title: "Child Page 1".to_string(),
+			},
+		);
+
+		let child_block2 = ContentBlock::now(
+			Some(*parent_block.nutty_id()),
+			FractionalIndex::between(&child_block1.f_index, &FractionalIndex::end()).unwrap(),
+			BlockContent::Page {
+				title: "Child Page 2".to_string(),
+			},
+		);
+
+		let grandchild_block = ContentBlock::now(
+			Some(*child_block1.nutty_id()),
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Grandchild Page".to_string(),
+			},
+		);
+
+		// Act: Save the content blocks.
+		repo
+			.upsert_content_block(parent_block.clone())
+			.await
+			.expect("Failed to save parent block");
+
+		repo
+			.upsert_content_block(child_block1.clone())
+			.await
+			.expect("Failed to save child block 1");
+
+		repo
+			.upsert_content_block(child_block2.clone())
+			.await
+			.expect("Failed to save child block 2");
+
+		repo
+			.upsert_content_block(grandchild_block.clone())
+			.await
+			.expect("Failed to save grandchild block");
+
+		// Act: Get the descendants of the parent block.
+		let descendants: Vec<ContentBlock> = repo
+			.get_descendant_blocks(&parent_block.nutty_id().into())
+			.await
+			.expect("Failed to get descendants");
+
+		// Assert: The descendants include both child blocks and the grandchild block.
+		assert_eq!(descendants.len(), 3);
+		assert!(
+			descendants
+				.iter()
+				.any(|block| block.nutty_id() == child_block1.nutty_id())
+		);
+		assert!(
+			descendants
+				.iter()
+				.any(|block| block.nutty_id() == child_block2.nutty_id())
+		);
+		assert!(
+			descendants
+				.iter()
+				.any(|block| block.nutty_id() == grandchild_block.nutty_id())
+		);
+
+		// Act: Get the descendants of child block 1.
+		let child1_descendants = repo
+			.get_descendant_blocks(&child_block1.nutty_id().into())
+			.await
+			.expect("Failed to get descendants of child 1");
+
+		// Assert: The descendants include only the grandchild block.
+		assert_eq!(child1_descendants.len(), 1);
+		assert!(
+			child1_descendants
+				.iter()
+				.any(|block| block.nutty_id() == grandchild_block.nutty_id())
+		);
+
+		// Act: Get the descendants of child block 2 (which has no descendants).
+		let child2_descendants = repo
+			.get_descendant_blocks(&child_block2.nutty_id().into())
+			.await
+			.expect("Failed to get descendants of child 2");
+
+		// Assert: There are no descendants.
+		assert_eq!(child2_descendants.len(), 0);
+
+		// Act: Get the descendants of the grandchild block (which has no descendants).
+		let grandchild_descendants = repo
+			.get_descendant_blocks(&grandchild_block.nutty_id().into())
+			.await
+			.expect("Failed to get descendants of grandchild");
+
+		// Assert: There are no descendants.
+		assert_eq!(grandchild_descendants.len(), 0);
 	}
 }
