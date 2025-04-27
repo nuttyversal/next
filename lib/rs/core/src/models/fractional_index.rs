@@ -153,7 +153,6 @@ pub enum FractionalIndexError {
 	IdenticalIndices,
 }
 
-
 #[cfg(test)]
 mod tests {
 	use super::*;
