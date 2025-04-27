@@ -9,6 +9,7 @@ use thiserror::Error;
 /// rendering of a content block. When constructing the context, take care
 /// to ensure that the following content blocks are included in the cache:
 ///
+/// ```text
 ///             • … and so on, and so forth — all ancestor content blocks, if any.
 ///          • The parent of the parent of the parent content block, if any.
 ///       • The parent of the parent content block, if any.
@@ -21,6 +22,7 @@ use thiserror::Error;
 ///
 /// • The reference (outbound links) content blocks, if any.
 /// • The backlinked (inbound links) content blocks, if any.
+/// ```
 #[derive(Debug, Clone)]
 pub struct ContentContext {
 	/// The Nutty ID of the content block.
