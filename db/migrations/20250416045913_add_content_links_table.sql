@@ -4,8 +4,6 @@ CREATE TABLE content.links (
 	nutty_id VARCHAR(7) NOT NULL,
 	source_id UUID NOT NULL,
 	target_id UUID NOT NULL,
-	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	CONSTRAINT links_source_id_fkey FOREIGN KEY (source_id) REFERENCES content.blocks(id) ON DELETE CASCADE,
 	CONSTRAINT links_target_id_fkey FOREIGN KEY (target_id) REFERENCES content.blocks(id) ON DELETE CASCADE,
 	CONSTRAINT links_source_target_unique UNIQUE (source_id, target_id)
