@@ -64,8 +64,8 @@ float calculateTemporalGlimmer() {
  * variation in the bloom effect.
  */
 float calculateSpatialGlimmer(vec2 uv) {
-	float intensity = 0.07;
-	float frequency = 32.0;
+	float intensity = 0.069;
+	float frequency = 24.0;
 	float speed = 0.4;
 	float translation = iTime * speed;
 	float diagonal = translation + (uv.x + uv.y) / 2.0;
@@ -91,7 +91,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 		// Measure the luminance of the sample.
 		float luminance = calculateLuminance(light);
-		float brightnessThreshold = 0.2;
+		float brightnessThreshold = 0.420;
 
 		// Add some glimmer! ✨
 		float temporalGlimmer = calculateTemporalGlimmer();
