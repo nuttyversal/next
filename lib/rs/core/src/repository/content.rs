@@ -68,7 +68,7 @@ impl ContentRepository {
 		// Find the content block.
 		let record = sqlx::query!(
 			r#"
-				SELECT id, parent_id, f_index, content
+				SELECT id, parent_id, f_index, content, created_at, updated_at
 				FROM content.blocks
 				WHERE nutty_id = $1
 			"#,
@@ -84,6 +84,8 @@ impl ContentRepository {
 				let parent_id = record.parent_id.map(NuttyId::new);
 				let f_index = FractionalIndex::new(record.f_index)?;
 				let content = ContentBlock::deserialize_content(record.content)?;
+				let created_at = record.created_at;
+				let updated_at = record.updated_at;
 
 				Ok(Some(
 					ContentBlock::builder()
@@ -91,6 +93,8 @@ impl ContentRepository {
 						.parent_id(parent_id)
 						.f_index(f_index)
 						.content(content)
+						.created_at(created_at)
+						.updated_at(updated_at)
 						.try_build()?,
 				))
 			}
@@ -128,7 +132,7 @@ impl ContentRepository {
 					FROM content.blocks p
 					JOIN ancestors a ON p.id = a.parent_id
 				)
-				SELECT id, parent_id, f_index, content
+				SELECT id, parent_id, f_index, content, created_at, updated_at
 				FROM ancestors
 				WHERE level > 0
 				ORDER BY level;
@@ -141,9 +145,13 @@ impl ContentRepository {
 		let mut blocks = Vec::new();
 
 		for record in records {
-			if let (Some(id), Some(f_index), Some(content)) =
-				(record.id, record.f_index, record.content)
-			{
+			if let (Some(id), Some(f_index), Some(content), Some(created_at), Some(updated_at)) = (
+				record.id,
+				record.f_index,
+				record.content,
+				record.created_at,
+				record.updated_at,
+			) {
 				let nutty_id = NuttyId::new(id);
 				let parent_id = record.parent_id.map(NuttyId::new);
 				let f_index = FractionalIndex::new(f_index)?;
@@ -155,6 +163,8 @@ impl ContentRepository {
 						.parent_id(parent_id)
 						.f_index(f_index)
 						.content(content)
+						.created_at(created_at)
+						.updated_at(updated_at)
 						.try_build()?,
 				);
 			}
@@ -191,7 +201,7 @@ impl ContentRepository {
 					FROM content.blocks c
 					JOIN descendants d ON c.parent_id = d.id
 				)
-				SELECT id, parent_id, f_index, content
+				SELECT id, parent_id, f_index, content, created_at, updated_at
 				FROM descendants
 				WHERE level > 0
 				ORDER BY level;
@@ -204,9 +214,13 @@ impl ContentRepository {
 		let mut blocks = Vec::new();
 
 		for record in records {
-			if let (Some(id), Some(f_index), Some(content)) =
-				(record.id, record.f_index, record.content)
-			{
+			if let (Some(id), Some(f_index), Some(content), Some(created_at), Some(updated_at)) = (
+				record.id,
+				record.f_index,
+				record.content,
+				record.created_at,
+				record.updated_at,
+			) {
 				let nutty_id = NuttyId::new(id);
 				let parent_id = record.parent_id.map(NuttyId::new);
 				let f_index = FractionalIndex::new(f_index)?;
@@ -218,6 +232,8 @@ impl ContentRepository {
 						.parent_id(parent_id)
 						.f_index(f_index)
 						.content(content)
+						.created_at(created_at)
+						.updated_at(updated_at)
 						.try_build()?,
 				);
 			}
@@ -250,7 +266,7 @@ impl ContentRepository {
 				VALUES ($1, $2, $3, $4, $5)
 				ON CONFLICT (id) DO UPDATE
 				SET parent_id = EXCLUDED.parent_id, content = EXCLUDED.content, f_index = EXCLUDED.f_index
-				RETURNING id, nutty_id, parent_id, f_index, content
+				RETURNING id, nutty_id, parent_id, f_index, content, created_at, updated_at
 			"#,
 			content_block.nutty_id().uuid(),
 			content_block.nutty_id().nid(),
@@ -266,12 +282,16 @@ impl ContentRepository {
 		let parent_id = record.parent_id.map(NuttyId::new);
 		let f_index = FractionalIndex::new(record.f_index)?;
 		let content = ContentBlock::deserialize_content(record.content)?;
+		let created_at = record.created_at;
+		let updated_at = record.updated_at;
 
 		Ok(ContentBlock::builder()
 			.nutty_id(nutty_id)
 			.parent_id(parent_id)
 			.f_index(f_index)
 			.content(content)
+			.created_at(created_at)
+			.updated_at(updated_at)
 			.try_build()?)
 	}
 
@@ -726,15 +746,11 @@ mod tests {
 		assert!(matches!(retrieved.content, BlockContent::Page { title } if title == "Test Page"));
 
 		// Act: Update the content block.
-		let updated_block = ContentBlock::builder()
-			.nutty_id(*test_block.nutty_id())
-			.parent_id(test_block.parent_id)
-			.f_index(test_block.f_index.clone())
-			.content(BlockContent::Page {
-				title: "Updated Page".to_string(),
-			})
-			.try_build()
-			.unwrap();
+		let mut updated_block = test_block.clone();
+
+		updated_block.content = BlockContent::Page {
+			title: "Updated Page".to_string(),
+		};
 
 		let updated = repo
 			.upsert_content_block(updated_block)
