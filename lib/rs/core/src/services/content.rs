@@ -1,5 +1,5 @@
 use crate::{
-	models::{ContentBlock, ContentContext, ContentLink, NuttyId},
+	models::{AnyNuttyId, ContentBlock, ContentContext, ContentLink},
 	repository::{
 		ContentRepository, ContentRepositoryError, Repository, repository::TransactionExt,
 	},
@@ -19,12 +19,12 @@ impl ContentService {
 	/// Get a content block's context.
 	pub async fn get_content_block_context(
 		&self,
-		nutty_id: &NuttyId,
+		nutty_id: &AnyNuttyId,
 	) -> Result<ContentContext, ContentServiceError> {
 		// Get the content block.
 		let content_block = self
 			.repository
-			.get_content_block(&nutty_id.into())
+			.get_content_block(nutty_id)
 			.await
 			.map_err(ContentServiceError::FetchContentBlock)?
 			.ok_or(ContentServiceError::ContentBlockNotFound)?;
@@ -32,35 +32,35 @@ impl ContentService {
 		// Get the ancestor blocks.
 		let ancestors = self
 			.repository
-			.get_ancestor_blocks(&nutty_id.into())
+			.get_ancestor_blocks(nutty_id)
 			.await
 			.map_err(ContentServiceError::FetchAncestorBlocks)?;
 
 		// Get the descendant blocks.
 		let descendants = self
 			.repository
-			.get_descendant_blocks(&nutty_id.into())
+			.get_descendant_blocks(nutty_id)
 			.await
 			.map_err(ContentServiceError::FetchDescendantBlocks)?;
 
 		// Get immediate children.
 		let children_ids = descendants
 			.iter()
-			.filter(|block| (block.parent_id.as_ref() == Some(nutty_id)))
+			.filter(|block| (block.parent_id.map(|i| i.nid()) == Some(nutty_id.nid())))
 			.map(|block| *block.nutty_id())
 			.collect::<Vec<_>>();
 
 		// Get outbound links (references).
 		let outbound_links = self
 			.repository
-			.get_content_links_from(nutty_id)
+			.get_content_links_from(content_block.nutty_id())
 			.await
 			.map_err(ContentServiceError::FetchOutboundLinks)?;
 
 		// Get inbound links (backlinks).
 		let inbound_links = self
 			.repository
-			.get_content_links_to(nutty_id)
+			.get_content_links_to(content_block.nutty_id())
 			.await
 			.map_err(ContentServiceError::FetchInboundLinks)?;
 
@@ -68,7 +68,7 @@ impl ContentService {
 		let mut block_cache = std::collections::HashMap::new();
 
 		// Add the main content block to the cache.
-		block_cache.insert(*nutty_id, content_block.clone());
+		block_cache.insert(*content_block.nutty_id(), content_block.clone());
 
 		// Add ancestor blocks to the cache.
 		for block in &ancestors {
@@ -86,7 +86,7 @@ impl ContentService {
 
 		// Create the content context.
 		let context = ContentContext::builder()
-			.block_id(*nutty_id)
+			.block_id(*content_block.nutty_id())
 			.parent_id(content_block.parent_id)
 			.children_ids(children_ids)
 			.reference_ids(reference_ids)
@@ -303,7 +303,7 @@ mod tests {
 
 		// Act: Get the context for the middle block.
 		let context = service
-			.get_content_block_context(middle_block.nutty_id())
+			.get_content_block_context(&middle_block.nutty_id().into())
 			.await
 			.expect("Failed to get content context");
 
@@ -342,7 +342,7 @@ mod tests {
 
 		// Get context for a child block to test different parent/children relationships.
 		let child_context = service
-			.get_content_block_context(child_block.nutty_id())
+			.get_content_block_context(&child_block.nutty_id().into())
 			.await
 			.expect("Failed to get child content context");
 

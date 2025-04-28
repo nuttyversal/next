@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::iter::repeat;
 use thiserror::Error;
@@ -8,7 +9,7 @@ use thiserror::Error;
 /// a digit in the range [33, 126] (the set of visible ASCII characters),
 /// which enables generation of new index between any two existing indices
 /// by averaging their values together.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FractionalIndex(String);
 
 impl FractionalIndex {

@@ -1,9 +1,10 @@
 use crate::models::{BlockContent, FractionalIndex, NuttyId};
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 use thiserror::Error;
 
 /// A block of content in the Nuttyverse.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ContentBlock {
 	nutty_id: NuttyId,
 	pub parent_id: Option<NuttyId>,

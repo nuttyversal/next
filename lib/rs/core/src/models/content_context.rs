@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-
 use crate::models::{ContentBlock, NuttyId};
+use serde::Serialize;
+use std::collections::HashMap;
 use thiserror::Error;
 
 /// Represents the immediate context of a content block.
@@ -23,7 +23,7 @@ use thiserror::Error;
 /// • The reference (outbound links) content blocks, if any.
 /// • The backlinked (inbound links) content blocks, if any.
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ContentContext {
 	/// The Nutty ID of the content block.
 	block_id: NuttyId,

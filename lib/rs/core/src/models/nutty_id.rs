@@ -1,7 +1,8 @@
 use proptest::prelude::Strategy;
-use sqlx::types::Uuid;
+use serde::Serialize;
 use std::cmp::Ordering;
 use thiserror::Error;
+use uuid::Uuid;
 
 /// A Nutty ID is a newtype wrapper around a UUID.
 ///
@@ -38,6 +39,15 @@ impl NuttyId {
 	pub fn nid(&self) -> String {
 		let last_41_bits = extract_last_41_bits(&self.uuid);
 		encode_base_58(last_41_bits)
+	}
+}
+
+impl Serialize for NuttyId {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: serde::Serializer,
+	{
+		serializer.serialize_str(&self.nid())
 	}
 }
 
