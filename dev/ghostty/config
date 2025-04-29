@@ -8,8 +8,8 @@ window-padding-y = 4
 adjust-cell-height = 15%
 
 # Font settings.
-font-family = PragmataPro Mono Liga
-font-thicken = false
+font-family = Iosevka Term
+font-thicken = true
 
 # Cursor settings.
 cursor-style = block
