@@ -1,4 +1,5 @@
 use crate::{
+	api::models::{Error, Response},
 	api::state::AppState,
 	models::{ContentContext, DissociatedNuttyId},
 };
@@ -15,18 +16,43 @@ pub fn router(app_state: Arc<AppState>) -> Router {
 		.with_state(app_state)
 }
 
+/// An API handler for fetching the [BlockContext] for a given [ContentBlock].
 async fn content_context_handler(
 	Path(block_id): Path<String>,
 	State(state): State<Arc<AppState>>,
-) -> Json<ContentContext> {
-	// [TODO] Safely handle unwrapping.
-	let block_id = DissociatedNuttyId::new(&block_id).unwrap();
+) -> Json<Response<ContentContext>> {
+	let block_id = DissociatedNuttyId::new(&block_id);
+
+	let block_id = match block_id {
+		Ok(id) => id,
+
+		Err(error) => {
+			let summary = "Failed to query block context.";
+			let error = Error::from_error(&error).with_summary(summary);
+
+			return Json(Response::Error {
+				errors: vec![error],
+			});
+		}
+	};
 
 	let block_context = state
 		.content_service
 		.get_content_block_context(&block_id.into())
 		.await;
 
-	// [TODO] Safely handle unwrapping.
-	Json(block_context.unwrap())
+	match block_context {
+		Ok(block_context) => Json(Response::Single {
+			data: Some(block_context),
+		}),
+
+		Err(error) => {
+			let summary = "Failed to query block context.";
+			let error = Error::from_error(&error).with_summary(summary);
+
+			Json(Response::Error {
+				errors: vec![error],
+			})
+		}
+	}
 }
