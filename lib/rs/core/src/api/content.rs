@@ -10,9 +10,13 @@ use axum::{
 };
 use std::sync::Arc;
 
+/// The router for content API endpoints.
 pub fn router(app_state: Arc<AppState>) -> Router {
 	Router::new()
-		.route("/block/{block_id}/context", get(content_context_handler))
+		.route(
+			"/content-block/{block_id}/context",
+			get(content_context_handler),
+		)
 		.with_state(app_state)
 }
 

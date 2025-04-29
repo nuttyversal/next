@@ -32,7 +32,7 @@ async fn main() {
 
 	let router = Router::new()
 		.route("/", get(|| async { "Hello world!" }))
-		.nest("/content", content::router(app_state.clone()));
+		.merge(content::router(app_state.clone()));
 
 	let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 	println!("Listening @ 0.0.0.0:3000…");
