@@ -35,6 +35,10 @@
 		"branch": "master",
 		"commit": "e87554285f581047b1bf236794b0eb812b444b87"
 	},
+	"outline.nvim": {
+		"branch": "main",
+		"commit": "321f89ef79f168a78685f70d70c52d0e7b563abb"
+	},
 	"plenary.nvim": {
 		"branch": "master",
 		"commit": "2d9b06177a975543726ce5c73fca176cedbffe9d"
