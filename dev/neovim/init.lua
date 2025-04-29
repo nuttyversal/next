@@ -124,6 +124,12 @@ vim.api.nvim_set_keymap("n", "<Leader>ww", ":w<CR>", { noremap = true, silent = 
 -- Did you forget to open the file as a superuser? No problem!
 vim.api.nvim_set_keymap("c", "w!!", "w !sudo tee % >/dev/null", { noremap = true })
 
+-- Resize windows.
+vim.keymap.set("n", "=", [[<Cmd>vertical resize +2<CR>]])
+vim.keymap.set("n", "-", [[<Cmd>vertical resize -2<CR>]])
+vim.keymap.set("n", "+", [[<Cmd>horizontal resize +1<CR>]])
+vim.keymap.set("n", "_", [[<Cmd>horizontal resize -1<CR>]])
+
 -- Load configuration modules.
 require("config.lazy")
 require("config.ai")
