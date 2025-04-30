@@ -77,6 +77,11 @@ vim.api.nvim_create_autocmd({ "LspAttach" }, {
 			vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled())
 		end, { noremap = true })
 
+		-- Show diagnostics in a floating window.
+		vim.keymap.set("n", "<Leader>e", function()
+			vim.diagnostic.open_float({ border = "rounded" })
+		end, { noremap = true })
+
 		-- Draw borders around floating documentation windows.
 		vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
 			border = "rounded",
