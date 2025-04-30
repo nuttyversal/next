@@ -1,6 +1,10 @@
-use sqlx::{Executor, Pool, Postgres, Transaction};
 use std::future::Future;
 use std::pin::Pin;
+
+use sqlx::Executor;
+use sqlx::Pool;
+use sqlx::Postgres;
+use sqlx::Transaction;
 
 pub trait Repository: Send + Sync {
 	/// Provide access to the database connection pool.

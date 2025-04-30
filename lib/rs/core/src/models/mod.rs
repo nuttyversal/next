@@ -11,5 +11,7 @@ pub use content_block::ContentBlock;
 pub use content_context::ContentContext;
 pub use content_link::ContentLink;
 pub use fractional_index::FractionalIndex;
-pub use nutty_id::{AnyNuttyId, DissociatedNuttyId, NuttyId};
+pub use nutty_id::AnyNuttyId;
+pub use nutty_id::DissociatedNuttyId;
+pub use nutty_id::NuttyId;
 pub use nutty_tag::NuttyTag;

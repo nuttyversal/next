@@ -1,5 +1,6 @@
-use regex::Regex;
 use std::fmt;
+
+use regex::Regex;
 use thiserror::Error;
 
 use crate::models::AnyNuttyId;
@@ -127,11 +128,12 @@ pub enum NuttyTagError {
 
 #[cfg(test)]
 mod tests {
-	use crate::models::*;
 	use nutty_id::valid_nutty_id;
 	use proptest::collection::vec;
 	use proptest::option;
 	use proptest::prelude::*;
+
+	use crate::models::*;
 
 	#[test]
 	fn test_parse_simple_tag() {

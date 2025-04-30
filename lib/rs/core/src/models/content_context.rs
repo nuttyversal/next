@@ -1,7 +1,10 @@
-use crate::models::{ContentBlock, NuttyId};
-use serde::Serialize;
 use std::collections::HashMap;
+
+use serde::Serialize;
 use thiserror::Error;
+
+use crate::models::ContentBlock;
+use crate::models::NuttyId;
 
 /// Represents the immediate context of a content block.
 ///

@@ -1,5 +1,7 @@
+use serde::Deserialize;
+use serde::Serialize;
+
 use crate::models::NuttyTag;
-use serde::{Deserialize, Serialize};
 
 /// Not to be confused with [ContentBlock].
 /// `ContentBlockContent` it might have been named,

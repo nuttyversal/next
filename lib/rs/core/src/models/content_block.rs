@@ -1,7 +1,11 @@
-use crate::models::{BlockContent, FractionalIndex, NuttyId};
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
+use chrono::Utc;
 use serde::Serialize;
 use thiserror::Error;
+
+use crate::models::BlockContent;
+use crate::models::FractionalIndex;
+use crate::models::NuttyId;
 
 /// A block of content in the Nuttyverse.
 #[derive(Debug, Clone, Serialize)]

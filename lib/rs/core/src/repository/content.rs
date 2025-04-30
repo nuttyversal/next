@@ -1,9 +1,15 @@
-use sqlx::{Executor, Postgres};
+use sqlx::Executor;
+use sqlx::Postgres;
 use thiserror::Error;
 
-use crate::models::content_block::{ContentBlockBuilderError, ContentBlockError};
+use crate::models::AnyNuttyId;
+use crate::models::ContentBlock;
+use crate::models::ContentLink;
+use crate::models::FractionalIndex;
+use crate::models::NuttyId;
+use crate::models::content_block::ContentBlockBuilderError;
+use crate::models::content_block::ContentBlockError;
 use crate::models::fractional_index::FractionalIndexError;
-use crate::models::{AnyNuttyId, ContentBlock, ContentLink, FractionalIndex, NuttyId};
 use crate::repository::Repository;
 
 /// A repository for content blocks.
@@ -690,13 +696,17 @@ pub enum ContentRepositoryError {
 
 #[cfg(test)]
 mod tests {
+	use sqlx::Pool;
+	use sqlx::Postgres;
 	use sqlx::postgres::PgPoolOptions;
-	use sqlx::{Pool, Postgres};
 
-	use crate::models::{
-		AnyNuttyId, BlockContent, ContentBlock, ContentLink, DissociatedNuttyId, FractionalIndex,
-		NuttyId,
-	};
+	use crate::models::AnyNuttyId;
+	use crate::models::BlockContent;
+	use crate::models::ContentBlock;
+	use crate::models::ContentLink;
+	use crate::models::DissociatedNuttyId;
+	use crate::models::FractionalIndex;
+	use crate::models::NuttyId;
 	use crate::repository::ContentRepository;
 
 	async fn connect_to_test_database() -> Pool<Postgres> {

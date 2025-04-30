@@ -2,12 +2,11 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::routing::get;
-use sqlx::postgres::PgPoolOptions;
-
 use nuttyverse_core::api::content;
 use nuttyverse_core::api::state::AppState;
 use nuttyverse_core::repository::ContentRepository;
 use nuttyverse_core::services::ContentService;
+use sqlx::postgres::PgPoolOptions;
 
 #[tokio::main]
 async fn main() {

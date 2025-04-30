@@ -1,6 +1,7 @@
+use std::cmp::Ordering;
+
 use proptest::prelude::Strategy;
 use serde::Serialize;
-use std::cmp::Ordering;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -242,8 +243,9 @@ pub fn valid_nutty_id() -> impl Strategy<Value = String> {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use proptest::prelude::*;
+
+	use super::*;
 
 	#[test]
 	fn test_hand_calculated_nutty_id() {

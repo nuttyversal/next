@@ -1,4 +1,5 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// The structure of an API response.
 #[derive(Serialize, Deserialize)]
@@ -114,8 +115,9 @@ impl Error {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use thiserror::Error;
+
+	use super::*;
 
 	#[derive(Debug, Error)]
 	#[error("An OuterError occurred: {cause}")]

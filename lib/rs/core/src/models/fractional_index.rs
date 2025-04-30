@@ -1,6 +1,8 @@
-use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::iter::repeat;
+
+use serde::Deserialize;
+use serde::Serialize;
 use thiserror::Error;
 
 /// A fractional index for ordering content blocks.
@@ -156,9 +158,10 @@ pub enum FractionalIndexError {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use proptest::prelude::*;
 	use proptest::proptest;
+
+	use super::*;
 
 	/// Generate a string that could be a valid index.
 	fn valid_index() -> impl Strategy<Value = String> {

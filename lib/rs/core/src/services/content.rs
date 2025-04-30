@@ -1,9 +1,11 @@
-use crate::{
-	models::{AnyNuttyId, ContentBlock, ContentContext, ContentLink},
-	repository::{
-		ContentRepository, ContentRepositoryError, Repository, repository::TransactionExt,
-	},
-};
+use crate::models::AnyNuttyId;
+use crate::models::ContentBlock;
+use crate::models::ContentContext;
+use crate::models::ContentLink;
+use crate::repository::ContentRepository;
+use crate::repository::ContentRepositoryError;
+use crate::repository::Repository;
+use crate::repository::repository::TransactionExt;
 
 pub struct ContentService {
 	// The content repository to use for storing and retrieving content.
@@ -199,11 +201,15 @@ pub enum ContentServiceError {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-	use crate::models::{BlockContent, ContentBlock, FractionalIndex};
-	use crate::repository::ContentRepository;
+	use sqlx::Pool;
+	use sqlx::Postgres;
 	use sqlx::postgres::PgPoolOptions;
-	use sqlx::{Pool, Postgres};
+
+	use super::*;
+	use crate::models::BlockContent;
+	use crate::models::ContentBlock;
+	use crate::models::FractionalIndex;
+	use crate::repository::ContentRepository;
 
 	async fn connect_to_test_database() -> Pool<Postgres> {
 		PgPoolOptions::new()

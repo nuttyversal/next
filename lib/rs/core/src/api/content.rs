@@ -1,17 +1,18 @@
-use crate::{
-	api::{
-		models::{Error, Response},
-		state::AppState,
-	},
-	models::{ContentContext, DissociatedNuttyId, nutty_id::NuttyIdError},
-	services::ContentServiceError,
-};
-use axum::{
-	Json, Router,
-	extract::{Path, State},
-	routing::get,
-};
 use std::sync::Arc;
+
+use axum::Json;
+use axum::Router;
+use axum::extract::Path;
+use axum::extract::State;
+use axum::routing::get;
+
+use crate::api::models::Error;
+use crate::api::models::Response;
+use crate::api::state::AppState;
+use crate::models::ContentContext;
+use crate::models::DissociatedNuttyId;
+use crate::models::nutty_id::NuttyIdError;
+use crate::services::ContentServiceError;
 
 /// The router for content API endpoints.
 pub fn router(app_state: Arc<AppState>) -> Router {
