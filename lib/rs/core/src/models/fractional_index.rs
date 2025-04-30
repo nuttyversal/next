@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::iter::repeat;
+use std::iter::repeat_n;
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -78,13 +78,13 @@ impl FractionalIndex {
 
 		let before_padded = {
 			let mut s = before.0.clone();
-			s.extend(repeat('!').take(max_len - before.0.len()));
+			s.extend(repeat_n('!', max_len - before.0.len()));
 			s
 		};
 
 		let after_padded = {
 			let mut s = after.0.clone();
-			s.extend(repeat('!').take(max_len - after.0.len()));
+			s.extend(repeat_n('!', max_len - after.0.len()));
 			s
 		};
 
@@ -133,13 +133,13 @@ impl Ord for FractionalIndex {
 
 		let self_padded = {
 			let mut s = self.0.clone();
-			s.extend(repeat('!').take(max_len - self.0.len()));
+			s.extend(repeat_n('!', max_len - self.0.len()));
 			s
 		};
 
 		let other_padded = {
 			let mut s = other.0.clone();
-			s.extend(repeat('!').take(max_len - other.0.len()));
+			s.extend(repeat_n('!', max_len - other.0.len()));
 			s
 		};
 

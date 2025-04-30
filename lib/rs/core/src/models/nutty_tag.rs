@@ -175,12 +175,12 @@ mod tests {
 		// A simple tag.
 		let nutty_id = AnyNuttyId::new("abcdefg").unwrap();
 		let tag = NuttyTag::new(nutty_id, None);
-		assert_eq!(format!("{}", tag), "[[abcdefg]]");
+		assert_eq!(format!("{tag}"), "[[abcdefg]]");
 
 		// A tag with display text.
 		let nutty_id = AnyNuttyId::new("abcdefg").unwrap();
 		let tag = NuttyTag::new(nutty_id, Some("Display Text".to_string()));
-		assert_eq!(format!("{}", tag), "[[abcdefg|Display Text]]");
+		assert_eq!(format!("{tag}"), "[[abcdefg|Display Text]]");
 	}
 
 	#[test]
@@ -257,7 +257,7 @@ mod tests {
 	proptest! {
 		 #[test]
 		 fn test_parse_valid_tag_property(id in valid_nutty_id()) {
-			  let tag_str = format!("[[{}]]", id);
+			  let tag_str = format!("[[{id}]]");
 			  let result = NuttyTag::parse(&tag_str);
 			  assert!(result.is_ok());
 
@@ -271,7 +271,7 @@ mod tests {
 			  id in valid_nutty_id(),
 			  display in "[^|]{1,100}"
 		 ) {
-			  let tag_str = format!("[[{}|{}]]", id, display);
+			  let tag_str = format!("[[{id}|{display}]]");
 			  let result = NuttyTag::parse(&tag_str);
 			  assert!(result.is_ok());
 
@@ -287,7 +287,7 @@ mod tests {
 		 ) {
 			  let nutty_id = AnyNuttyId::new(&id).unwrap();
 			  let tag = NuttyTag::new(nutty_id, display_option.clone().map(|s| s.trim().to_string()));
-			  let tag_str = format!("{}", tag);
+			  let tag_str = format!("{tag}");
 			  let parsed = NuttyTag::parse(&tag_str).unwrap();
 
 			  assert_eq!(parsed.nutty_id().nid(), id);
@@ -309,8 +309,8 @@ mod tests {
 
 				// Add the tag.
 				match display {
-					Some(display) => text.push_str(&format!("[[{}|{}]]", id, display)),
-					None => text.push_str(&format!("[[{}]]", id)),
+					Some(display) => text.push_str(&format!("[[{id}|{display}]]")),
+					None => text.push_str(&format!("[[{id}]]")),
 				}
 			}
 
