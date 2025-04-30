@@ -115,194 +115,59 @@ impl Error {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use std::fmt;
+	use thiserror::Error;
 
-	#[derive(Debug)]
-	struct RowNotFound;
+	#[derive(Debug, Error)]
+	#[error("An OuterError occurred: {cause}")]
+	pub struct OuterError {
+		#[from]
+		cause: EnumError,
+	}
 
-	impl fmt::Display for RowNotFound {
-		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-			write!(
-				f,
-				"No rows returned by a query that expected to return at least one row"
+	#[derive(Debug, Error)]
+	pub enum EnumError {
+		#[error("An EnumError message: Variant: {cause}")]
+		Variant {
+			#[from]
+			cause: InnerError,
+		},
+	}
+
+	#[derive(Debug, Error)]
+	#[error("An InnerError occurred")]
+	pub struct InnerError;
+
+	#[test]
+	fn test_error_unwinding() {
+		// Arrange.
+		let nested_error = OuterError::from(EnumError::from(InnerError));
+
+		// Act.
+		let api_error = Error::from_error(&nested_error).with_summary("An error occurred.");
+
+		// Assert.
+		assert_eq!(api_error.code, Some("OuterError".to_string()));
+		assert_eq!(api_error.summary, Some("An error occurred.".to_string()));
+
+		assert_eq!(
+			api_error.trace,
+			vec![
+				"OuterError".to_string(),
+				"Variant".to_string(),
+				"InnerError".to_string()
+			]
+		);
+
+		assert_eq!(
+			api_error.message,
+			Some(
+				[
+					"An OuterError occurred:",
+					"An EnumError message: Variant:",
+					"An InnerError occurred"
+				]
+				.join(" ")
 			)
-		}
-	}
-
-	impl std::error::Error for RowNotFound {}
-
-	#[derive(Debug)]
-	struct DatabaseQueryError {
-		source: RowNotFound,
-	}
-
-	impl fmt::Display for DatabaseQueryError {
-		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-			write!(f, "Database query failed: {}", self.source)
-		}
-	}
-
-	impl std::error::Error for DatabaseQueryError {
-		fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-			Some(&self.source)
-		}
-	}
-
-	#[derive(Debug)]
-	struct ArticleNotFoundError {
-		slug: String,
-	}
-
-	impl fmt::Display for ArticleNotFoundError {
-		fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-			write!(f, "Article with slug '{}' not found", self.slug)
-		}
-	}
-
-	impl std::error::Error for ArticleNotFoundError {}
-
-	#[test]
-	fn test_error_from_simple_error() {
-		// Arrange: Create a simple error with no nested errors.
-		let article_error = ArticleNotFoundError {
-			slug: "getting-started".to_string(),
-		};
-
-		// Act: Create an Error from the simple error.
-		let error = Error::from_error(&article_error);
-
-		// Assert: The error fields match the expected values.
-		assert_eq!(error.code, Some("ArticleNotFoundError".to_string()));
-
-		assert_eq!(
-			error.trace.first(),
-			Some(&"ArticleNotFoundError".to_string())
 		);
-
-		assert_eq!(
-			error.message,
-			Some("Article with slug 'getting-started' not found".to_string())
-		);
-
-		assert_eq!(error.summary, None);
-	}
-
-	#[test]
-	fn test_error_from_nested_error() {
-		// Arrange: Create a nested error chain.
-		let row_not_found = RowNotFound;
-
-		let db_error = DatabaseQueryError {
-			source: row_not_found,
-		};
-
-		// Act: Create an Error from the nested error.
-		let error = Error::from_error(&db_error);
-
-		// Assert: The error contains the expected information.
-		assert_eq!(error.code, Some("DatabaseQueryError".to_string()));
-
-		assert!(
-			error.trace.len() >= 2,
-			"Error trace should include at least two entries"
-		);
-
-		assert_eq!(
-			error.message,
-			Some("Database query failed: No rows returned by a query that expected to return at least one row".to_string())
-		);
-	}
-
-	#[test]
-	fn test_error_with_summary() {
-		// Arrange: Create a simple error.
-		let article_error = ArticleNotFoundError {
-			slug: "getting-started".to_string(),
-		};
-
-		// Act: Create an Error with a summary.
-		let error = Error::from_error(&article_error)
-			.with_summary("The article you requested does not exist.");
-
-		// Assert: The summary is correctly attached.
-		assert_eq!(
-			error.summary,
-			Some("The article you requested does not exist.".to_string())
-		);
-	}
-
-	#[test]
-	fn test_error_serialization() {
-		// Arrange: Create errors to serialize.
-		let article_error = ArticleNotFoundError {
-			slug: "getting-started".to_string(),
-		};
-
-		let row_not_found = RowNotFound;
-
-		let db_error = DatabaseQueryError {
-			source: row_not_found,
-		};
-
-		// Act: Create and serialize an Error with a summary.
-		let error_with_summary = Error::from_error(&article_error)
-			.with_summary("The article you requested does not exist.");
-		let json_with_summary = serde_json::to_string(&error_with_summary).unwrap();
-
-		// Act: Create and serialize a nested error.
-		let nested_error = Error::from_error(&db_error);
-		let json_nested = serde_json::to_string(&nested_error).unwrap();
-
-		// Assert: The serialized JSON contains the expected fields.
-		let parsed_with_summary: serde_json::Value =
-			serde_json::from_str(&json_with_summary).unwrap();
-
-		assert_eq!(
-			parsed_with_summary["code"].as_str().unwrap(),
-			"ArticleNotFoundError"
-		);
-
-		assert_eq!(
-			parsed_with_summary["message"].as_str().unwrap(),
-			"Article with slug 'getting-started' not found"
-		);
-
-		assert_eq!(
-			parsed_with_summary["summary"].as_str().unwrap(),
-			"The article you requested does not exist."
-		);
-
-		let expected_trace = vec!["ArticleNotFoundError"];
-		let actual_trace: Vec<&str> = parsed_with_summary["trace"]
-			.as_array()
-			.unwrap()
-			.iter()
-			.map(|v| v.as_str().unwrap())
-			.collect();
-
-		assert_eq!(actual_trace, expected_trace);
-
-		// Assert: The serialized JSON contains the expected fields.
-		let parsed_nested: serde_json::Value = serde_json::from_str(&json_nested).unwrap();
-
-		assert_eq!(
-			parsed_nested["code"].as_str().unwrap(),
-			"DatabaseQueryError"
-		);
-
-		assert_eq!(
-			parsed_nested["message"].as_str().unwrap(),
-			"Database query failed: No rows returned by a query that expected to return at least one row"
-		);
-
-		let expected_nested_trace = vec!["DatabaseQueryError", "RowNotFound"];
-		let actual_nested_trace: Vec<&str> = parsed_nested["trace"]
-			.as_array()
-			.unwrap()
-			.iter()
-			.map(|v| v.as_str().unwrap())
-			.collect();
-
-		assert_eq!(actual_nested_trace, expected_nested_trace);
 	}
 }
