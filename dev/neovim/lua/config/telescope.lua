@@ -1,3 +1,4 @@
+--- @diagnostic disable: undefined-field
 local telescope = require("telescope")
 local telescope_builtin = require("telescope.builtin")
 
