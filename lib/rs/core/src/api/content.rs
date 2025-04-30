@@ -1,7 +1,10 @@
 use crate::{
-	api::models::{Error, Response},
-	api::state::AppState,
-	models::{ContentContext, DissociatedNuttyId},
+	api::{
+		models::{Error, Response},
+		state::AppState,
+	},
+	models::{ContentContext, DissociatedNuttyId, nutty_id::NuttyIdError},
+	services::ContentServiceError,
 };
 use axum::{
 	Json, Router,
@@ -32,6 +35,7 @@ async fn content_context_handler(
 
 		Err(error) => {
 			let summary = "Failed to query block context.";
+			let error = ContentApiError::LookupBlockContext(error);
 			let error = Error::from_error(&error).with_summary(summary);
 
 			return Json(Response::Error {
@@ -52,6 +56,7 @@ async fn content_context_handler(
 
 		Err(error) => {
 			let summary = "Failed to query block context.";
+			let error = ContentApiError::QueryBlockContext(error);
 			let error = Error::from_error(&error).with_summary(summary);
 
 			Json(Response::Error {
@@ -59,4 +64,13 @@ async fn content_context_handler(
 			})
 		}
 	}
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ContentApiError {
+	#[error("Unable to look up block context: {0}")]
+	LookupBlockContext(#[from] NuttyIdError),
+
+	#[error("Unable to query block context: {0}")]
+	QueryBlockContext(#[from] ContentServiceError),
 }
