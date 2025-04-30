@@ -3,6 +3,10 @@
 		"branch": "main",
 		"commit": "75cadbcd2657ed01326ca2b0e5e4d78a77127ca3"
 	},
+	"codecompanion.nvim": {
+		"branch": "main",
+		"commit": "461459750d4a72e512a5c43eeb60e49b931b17de"
+	},
 	"conform.nvim": {
 		"branch": "master",
 		"commit": "372fc521f8421b7830ea6db4d6ea3bae1c77548c"
