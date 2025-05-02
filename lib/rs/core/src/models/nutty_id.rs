@@ -42,7 +42,20 @@ impl NuttyId {
 		encode_base_58(last_41_bits)
 	}
 
-	/// Dissociate!
+	/// Get the Unix timestamp (in milliseconds) encoded in the UUIDv7.
+	pub fn timestamp(&self) -> u64 {
+		let bytes = self.uuid.as_bytes();
+
+		// Extract the first 48 bits (6 bytes).
+		((bytes[0] as u64) << 40)
+			| ((bytes[1] as u64) << 32)
+			| ((bytes[2] as u64) << 24)
+			| ((bytes[3] as u64) << 16)
+			| ((bytes[4] as u64) << 8)
+			| (bytes[5] as u64)
+	}
+
+	/// Detach the NID from the UUID.
 	pub fn dissociate(&self) -> DissociatedNuttyId {
 		DissociatedNuttyId::new(&self.nid()).expect("the impossible")
 	}
@@ -371,5 +384,62 @@ mod tests {
 		assert!(!is_valid_nutty_id("abcdefl")); // Contains 'l'.
 		assert!(!is_valid_nutty_id("abcdef!")); // Contains invalid character.
 		assert!(!is_valid_nutty_id("zzzzzzz")); // Not derived from UUID.
+	}
+
+	#[test]
+	fn test_timestamp_extraction() {
+		// January 1, 2023 00:00:00 UTC = 1672531200000 milliseconds since epoch.
+		// This is 0x0186741B0D80 in hexadecimal (48 bits).
+		let mut bytes = [0; 16];
+		bytes[0] = 0x01;
+		bytes[1] = 0x86;
+		bytes[2] = 0x74;
+		bytes[3] = 0x1B;
+		bytes[4] = 0x0D;
+		bytes[5] = 0x80;
+
+		// Set version to 7 (UUIDv7).
+		bytes[6] = (bytes[6] & 0x0F) | 0x70;
+
+		// Set variant to RFC 4122.
+		bytes[8] = (bytes[8] & 0x3F) | 0x80;
+
+		// Fill remaining bytes with some values.
+		(9..16).for_each(|i| {
+			bytes[i] = i as u8;
+		});
+
+		let uuid = Uuid::from_bytes(bytes);
+		let nutty_id = NuttyId::new(uuid);
+
+		let expected_timestamp = 0x0186741B0D80;
+		assert_eq!(nutty_id.timestamp(), expected_timestamp);
+	}
+
+	#[test]
+	fn test_now_timestamp_is_current() {
+		// Get current timestamp in milliseconds.
+		let before_ms = std::time::SystemTime::now()
+			.duration_since(std::time::UNIX_EPOCH)
+			.expect("Time went backwards")
+			.as_millis() as u64;
+
+		// Create a new NuttyId with the current time.
+		let nutty_id = NuttyId::now();
+
+		// Get current timestamp after creating NuttyId.
+		let after_ms = std::time::SystemTime::now()
+			.duration_since(std::time::UNIX_EPOCH)
+			.expect("Time went backwards")
+			.as_millis() as u64;
+
+		// Extract the timestamp from the NuttyId.
+		let extracted_ms = nutty_id.timestamp();
+
+		// Verify the timestamp is within range.
+		assert!(
+			extracted_ms >= before_ms && extracted_ms <= after_ms,
+			"Extracted timestamp ({extracted_ms}) should be between {before_ms} and {after_ms}"
+		);
 	}
 }
