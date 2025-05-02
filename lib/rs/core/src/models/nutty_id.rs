@@ -315,6 +315,45 @@ mod tests {
 		assert_eq!(nutty_id.nid(), "qfWLRgy");
 	}
 
+	#[test]
+	fn test_deserialize() {
+		// Create a known UUID and its associated NID.
+		let nutty_id = NuttyId::now();
+		let uuid = nutty_id.uuid();
+		let correct_nid = nutty_id.nid();
+
+		// Test case 0: Valid UUID and NID.
+		let well_formed = format!("{uuid}:{correct_nid}");
+		let result: Result<NuttyId, _> = serde_json::from_str(&format!("\"{well_formed}\""));
+		assert!(result.is_ok());
+
+		// Test case 1: Wrong NID for the UUID.
+		let wrong_nid = "1234567";
+		let malformed = format!("{uuid}:{wrong_nid}");
+		let result: Result<NuttyId, _> = serde_json::from_str(&format!("\"{malformed}\""));
+		assert!(result.is_err());
+
+		// Test case 2: Missing colon separator.
+		let no_colon = format!("{uuid}{correct_nid}");
+		let result: Result<NuttyId, _> = serde_json::from_str(&format!("\"{no_colon}\""));
+		assert!(result.is_err());
+
+		// Test case 3: Invalid UUID.
+		let invalid_uuid = format!("not-a-uuid:{correct_nid}");
+		let result: Result<NuttyId, _> = serde_json::from_str(&format!("\"{invalid_uuid}\""));
+		assert!(result.is_err());
+
+		// Test case 4: Invalid NID (wrong length).
+		let invalid_nid = format!("{uuid}:12345");
+		let result: Result<NuttyId, _> = serde_json::from_str(&format!("\"{invalid_nid}\""));
+		assert!(result.is_err());
+
+		// Test case 5: Invalid NID (illegal character).
+		let invalid_nid = format!("{uuid}:abcdef0"); // contains '0' which is not in base58
+		let result: Result<NuttyId, _> = serde_json::from_str(&format!("\"{invalid_nid}\""));
+		assert!(result.is_err());
+	}
+
 	/// A newtype wrapper for [Uuid] to implement [Arbitrary].
 	#[derive(Debug, Clone)]
 	struct TestUuid(Uuid);
