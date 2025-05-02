@@ -66,7 +66,45 @@ impl Serialize for NuttyId {
 	where
 		S: serde::Serializer,
 	{
-		serializer.serialize_str(&self.nid())
+		let uuid = self.uuid.to_string();
+		let nid = self.nid();
+		serializer.serialize_str(&(uuid + ":" + &nid))
+	}
+}
+
+impl<'de> serde::Deserialize<'de> for NuttyId {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+	where
+		D: serde::Deserializer<'de>,
+	{
+		let s = String::deserialize(deserializer)?;
+
+		// Split the string on the colon.
+		let parts: Vec<&str> = s.split(':').collect();
+
+		if parts.len() != 2 {
+			return Err(serde::de::Error::custom(
+				"Invalid format: expected <UUID>:<NID>",
+			));
+		}
+
+		// Parse the UUID.
+		let uuid = Uuid::parse_str(parts[0])
+			.map_err(|e| serde::de::Error::custom(format!("Invalid UUID: {e}")))?;
+
+		// Create the Nutty ID.
+		let nutty_id = NuttyId::new(uuid);
+
+		// Verify the NID as a checksum.
+		if nutty_id.nid() != parts[1] {
+			return Err(serde::de::Error::custom(format!(
+				"NID mismatch: expected {}, got {}",
+				nutty_id.nid(),
+				parts[1]
+			)));
+		}
+
+		Ok(nutty_id)
 	}
 }
 
@@ -325,6 +363,25 @@ mod tests {
 			let bits1 = extract_last_41_bits(&uuid1.0);
 			let bits2 = extract_last_41_bits(&uuid2.0);
 			assert_eq!(nutty_id1.nid() < nutty_id2.nid(), bits1 < bits2);
+		}
+
+		#[test]
+		fn test_nutty_id_serde_roundtrip(uuid in any::<TestUuid>()) {
+			// Create a Nutty ID.
+			let original = NuttyId::new(uuid.0);
+
+			// Serialize to JSON.
+			let serialized = serde_json::to_string(&original)
+				.expect("Failed to serialize NuttyId");
+
+			// Deserialize to Nutty ID.
+			let deserialized: NuttyId = serde_json::from_str(&serialized)
+				.expect("Failed to deserialize NuttyId");
+
+			// Check equality.
+			assert_eq!(original, deserialized);
+			assert_eq!(original.uuid(), deserialized.uuid());
+			assert_eq!(original.nid(), deserialized.nid());
 		}
 	}
 
