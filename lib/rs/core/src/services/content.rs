@@ -1,7 +1,7 @@
-use crate::models::AnyNuttyId;
 use crate::models::ContentBlock;
 use crate::models::ContentContext;
 use crate::models::ContentLink;
+use crate::models::DissociatedNuttyId;
 use crate::repository::ContentRepository;
 use crate::repository::ContentRepositoryError;
 use crate::repository::Repository;
@@ -21,7 +21,7 @@ impl ContentService {
 	/// Get a content block's context.
 	pub async fn get_content_block_context(
 		&self,
-		nutty_id: &AnyNuttyId,
+		nutty_id: &DissociatedNuttyId,
 	) -> Result<ContentContext, ContentServiceError> {
 		// Get the content block.
 		let content_block = self

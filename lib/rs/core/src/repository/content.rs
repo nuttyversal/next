@@ -2,9 +2,9 @@ use sqlx::Executor;
 use sqlx::Postgres;
 use thiserror::Error;
 
-use crate::models::AnyNuttyId;
 use crate::models::ContentBlock;
 use crate::models::ContentLink;
+use crate::models::DissociatedNuttyId;
 use crate::models::FractionalIndex;
 use crate::models::NuttyId;
 use crate::models::content_block::ContentBlockBuilderError;
@@ -25,11 +25,42 @@ impl ContentRepository {
 		Self { pool }
 	}
 
-	/// Resolve a collection of [AnyNuttyId] into a Vec of [NuttyId].
+	/// Resolve a [DissociatedNuttyId] into a [NuttyId].
+	pub async fn resolve_nutty_id_tx<'e, E>(
+		&self,
+		executor: E,
+		id: DissociatedNuttyId,
+	) -> Result<NuttyId, ContentRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
+		let record = sqlx::query!(
+			r#"
+				SELECT id, nutty_id
+				FROM content.blocks
+				WHERE nutty_id = $1
+			"#,
+			id.nid(),
+		)
+		.fetch_one(executor)
+		.await?;
+
+		Ok(NuttyId::new(record.id))
+	}
+
+	/// Resolve a [DissociatedNuttyId] into a [NuttyId].
+	pub async fn resolve_nutty_id(
+		&self,
+		id: DissociatedNuttyId,
+	) -> Result<NuttyId, ContentRepositoryError> {
+		self.resolve_nutty_id_tx(&self.pool, id).await
+	}
+
+	/// Resolve a collection of [DissociatedNuttyId] into a Vec of [NuttyId].
 	pub async fn resolve_nutty_ids_tx<'e, 'i, E, I>(&self, executor: E, ids: I) -> Vec<NuttyId>
 	where
 		E: Executor<'e, Database = Postgres>,
-		I: IntoIterator<Item = &'i AnyNuttyId>,
+		I: IntoIterator<Item = &'i DissociatedNuttyId>,
 	{
 		// Collect Nutty IDs.
 		let nids: Vec<_> = ids.into_iter().map(|id| id.nid()).collect();
@@ -54,10 +85,10 @@ impl ContentRepository {
 			.collect()
 	}
 
-	/// Resolve a collection of [AnyNuttyId] into a Vec of [NuttyId].
+	/// Resolve a collection of [DissociatedNuttyId] into a Vec of [NuttyId].
 	pub async fn resolve_nutty_ids<'i, I>(&self, ids: I) -> Vec<NuttyId>
 	where
-		I: IntoIterator<Item = &'i AnyNuttyId>,
+		I: IntoIterator<Item = &'i DissociatedNuttyId>,
 	{
 		self.resolve_nutty_ids_tx(&self.pool, ids).await
 	}
@@ -66,7 +97,7 @@ impl ContentRepository {
 	pub async fn get_content_block_tx<'e, E>(
 		&self,
 		executor: E,
-		nutty_id: &AnyNuttyId,
+		nutty_id: &DissociatedNuttyId,
 	) -> Result<Option<ContentBlock>, ContentRepositoryError>
 	where
 		E: Executor<'e, Database = Postgres>,
@@ -113,7 +144,7 @@ impl ContentRepository {
 	/// Get a content block by its Nutty ID.
 	pub async fn get_content_block(
 		&self,
-		nutty_id: &AnyNuttyId,
+		nutty_id: &DissociatedNuttyId,
 	) -> Result<Option<ContentBlock>, ContentRepositoryError> {
 		self.get_content_block_tx(&self.pool, nutty_id).await
 	}
@@ -122,7 +153,7 @@ impl ContentRepository {
 	pub async fn get_ancestor_blocks_tx<'e, E>(
 		&self,
 		executor: E,
-		nutty_id: &AnyNuttyId,
+		nutty_id: &DissociatedNuttyId,
 	) -> Result<Vec<ContentBlock>, ContentRepositoryError>
 	where
 		E: Executor<'e, Database = Postgres>,
@@ -182,7 +213,7 @@ impl ContentRepository {
 	/// Get all ancestors of a content block.
 	pub async fn get_ancestor_blocks(
 		&self,
-		nutty_id: &AnyNuttyId,
+		nutty_id: &DissociatedNuttyId,
 	) -> Result<Vec<ContentBlock>, ContentRepositoryError> {
 		self.get_ancestor_blocks_tx(&self.pool, nutty_id).await
 	}
@@ -191,7 +222,7 @@ impl ContentRepository {
 	pub async fn get_descendant_blocks_tx<'e, E>(
 		&self,
 		executor: E,
-		nutty_id: &AnyNuttyId,
+		nutty_id: &DissociatedNuttyId,
 	) -> Result<Vec<ContentBlock>, ContentRepositoryError>
 	where
 		E: Executor<'e, Database = Postgres>,
@@ -251,7 +282,7 @@ impl ContentRepository {
 	/// Get all descendants of a content block.
 	pub async fn get_descendant_blocks(
 		&self,
-		nutty_id: &AnyNuttyId,
+		nutty_id: &DissociatedNuttyId,
 	) -> Result<Vec<ContentBlock>, ContentRepositoryError> {
 		self.get_descendant_blocks_tx(&self.pool, nutty_id).await
 	}
@@ -315,7 +346,7 @@ impl ContentRepository {
 	pub async fn delete_content_block_tx<'e, E>(
 		&self,
 		executor: E,
-		nutty_id: &AnyNuttyId,
+		nutty_id: &DissociatedNuttyId,
 	) -> Result<(), ContentRepositoryError>
 	where
 		E: Executor<'e, Database = Postgres>,
@@ -336,7 +367,7 @@ impl ContentRepository {
 	/// Delete a block of content by its identifier.
 	pub async fn delete_content_block(
 		&self,
-		nutty_id: &AnyNuttyId,
+		nutty_id: &DissociatedNuttyId,
 	) -> Result<(), ContentRepositoryError> {
 		self.delete_content_block_tx(&self.pool, nutty_id).await
 	}
@@ -345,7 +376,7 @@ impl ContentRepository {
 	pub async fn get_content_link_tx<'e, E>(
 		&self,
 		executor: E,
-		nutty_id: &AnyNuttyId,
+		nutty_id: &DissociatedNuttyId,
 	) -> Result<Option<ContentLink>, ContentRepositoryError>
 	where
 		E: Executor<'e, Database = Postgres>,
@@ -378,7 +409,7 @@ impl ContentRepository {
 	/// Get a content link by its identifier.
 	pub async fn get_content_link(
 		&self,
-		nutty_id: &AnyNuttyId,
+		nutty_id: &DissociatedNuttyId,
 	) -> Result<Option<ContentLink>, ContentRepositoryError> {
 		self.get_content_link_tx(&self.pool, nutty_id).await
 	}
@@ -700,7 +731,6 @@ mod tests {
 	use sqlx::Postgres;
 	use sqlx::postgres::PgPoolOptions;
 
-	use crate::models::AnyNuttyId;
 	use crate::models::BlockContent;
 	use crate::models::ContentBlock;
 	use crate::models::ContentLink;
@@ -877,7 +907,7 @@ mod tests {
 
 		// Act: Try to get a non-existent link.
 		let non_existent_link = repo
-			.get_content_link(&AnyNuttyId::Associated(NuttyId::now()))
+			.get_content_link(&NuttyId::now().dissociate())
 			.await
 			.expect("Failed to check non-existent link");
 
@@ -951,17 +981,13 @@ mod tests {
 			.await
 			.expect("Failed to save block2");
 
-		// Act: Create a mix of associated and dissociated IDs.
+		// Act: Create a mix of existing and non-existent Nutty IDs.
 		let ids = [
-			AnyNuttyId::Associated(*block1.nutty_id()),
-			AnyNuttyId::Dissociated(
-				DissociatedNuttyId::new(&block2.nutty_id().nid())
-					.expect("Failed to create dissociated ID"),
-			),
-			AnyNuttyId::Associated(NuttyId::now()),
-			AnyNuttyId::Dissociated(
-				DissociatedNuttyId::new("1111111").expect("Failed to create dissociated ID"),
-			),
+			block1.nutty_id().dissociate(),
+			DissociatedNuttyId::new(&block2.nutty_id().nid())
+				.expect("Failed to create dissociated ID"),
+			NuttyId::now().dissociate(),
+			DissociatedNuttyId::new("1111111").expect("Failed to create dissociated ID"),
 		];
 
 		// Act: Resolve the IDs.
@@ -1253,7 +1279,8 @@ mod tests {
 		assert_eq!(parent_ancestors.len(), 0);
 
 		// Act: Get the ancestors of a non-existent block.
-		let non_existent_block = AnyNuttyId::Associated(NuttyId::now());
+		let non_existent_block = NuttyId::now().dissociate();
+
 		let non_existent_ancestors = repo
 			.get_ancestor_blocks(&non_existent_block)
 			.await

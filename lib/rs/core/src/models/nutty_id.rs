@@ -41,6 +41,11 @@ impl NuttyId {
 		let last_41_bits = extract_last_41_bits(&self.uuid);
 		encode_base_58(last_41_bits)
 	}
+
+	/// Dissociate!
+	pub fn dissociate(&self) -> DissociatedNuttyId {
+		DissociatedNuttyId::new(&self.nid()).expect("the impossible")
+	}
 }
 
 impl Serialize for NuttyId {
@@ -94,52 +99,15 @@ impl DissociatedNuttyId {
 	}
 }
 
-/// Either [NuttyId] or [DissociatedNuttyId].
-///
-/// Used in signatures for functions and methods that can
-/// accept any Nutty ID, even the ones that are dissociated.
-#[derive(Debug, Copy, Clone, Eq, Hash, PartialEq)]
-pub enum AnyNuttyId {
-	/// A Nutty ID associated with a UUID.
-	Associated(NuttyId),
-
-	/// A Nutty ID without a UUID — dissociated. 💀
-	Dissociated(DissociatedNuttyId),
-}
-
-impl AnyNuttyId {
-	/// Create a new Nutty ID from a string slice.
-	pub fn new(nid: &str) -> Result<Self, NuttyIdError> {
-		match DissociatedNuttyId::new(nid) {
-			Ok(dissociated) => Ok(AnyNuttyId::Dissociated(dissociated)),
-			Err(e) => Err(e),
-		}
-	}
-
-	/// Get the Nutty ID.
-	pub fn nid(&self) -> String {
-		match self {
-			AnyNuttyId::Associated(nutty_id) => nutty_id.nid(),
-			AnyNuttyId::Dissociated(nutty_id) => nutty_id.nid(),
-		}
-	}
-}
-
-impl From<NuttyId> for AnyNuttyId {
+impl From<NuttyId> for DissociatedNuttyId {
 	fn from(nutty_id: NuttyId) -> Self {
-		AnyNuttyId::Associated(nutty_id)
+		nutty_id.dissociate()
 	}
 }
 
-impl From<&NuttyId> for AnyNuttyId {
+impl From<&NuttyId> for DissociatedNuttyId {
 	fn from(nutty_id: &NuttyId) -> Self {
-		AnyNuttyId::Associated(*nutty_id)
-	}
-}
-
-impl From<DissociatedNuttyId> for AnyNuttyId {
-	fn from(nutty_id: DissociatedNuttyId) -> Self {
-		AnyNuttyId::Dissociated(nutty_id)
+		nutty_id.dissociate()
 	}
 }
 

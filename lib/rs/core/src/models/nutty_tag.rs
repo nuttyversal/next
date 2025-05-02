@@ -3,7 +3,7 @@ use std::fmt;
 use regex::Regex;
 use thiserror::Error;
 
-use crate::models::AnyNuttyId;
+use crate::models::nutty_id::DissociatedNuttyId;
 use crate::models::nutty_id::NuttyIdError;
 
 /// A NuttyTag represents a wikilink-style tag containing a Nutty ID.
@@ -13,13 +13,13 @@ use crate::models::nutty_id::NuttyIdError;
 /// optional text to render in the UI instead of the Nutty ID.
 #[derive(Debug)]
 pub struct NuttyTag {
-	nutty_id: AnyNuttyId,
+	nutty_id: DissociatedNuttyId,
 	display_text: Option<String>,
 }
 
 impl NuttyTag {
 	/// Create a new `NuttyTag` from a Nutty ID and optional display text.
-	pub fn new(nutty_id: AnyNuttyId, display_text: Option<String>) -> Self {
+	pub fn new(nutty_id: DissociatedNuttyId, display_text: Option<String>) -> Self {
 		Self {
 			nutty_id,
 			display_text,
@@ -43,7 +43,7 @@ impl NuttyTag {
 			// Format: [[abcdefg]]
 			1 => {
 				let id_str = parts[0].trim();
-				let nutty_id = AnyNuttyId::new(id_str)?;
+				let nutty_id = DissociatedNuttyId::new(id_str)?;
 
 				Ok(Self {
 					nutty_id,
@@ -55,7 +55,7 @@ impl NuttyTag {
 			2 => {
 				let id_str = parts[0].trim();
 				let display = parts[1].trim();
-				let nutty_id = AnyNuttyId::new(id_str)?;
+				let nutty_id = DissociatedNuttyId::new(id_str)?;
 
 				Ok(Self {
 					nutty_id,
@@ -87,7 +87,7 @@ impl NuttyTag {
 	}
 
 	/// Get the Nutty ID.
-	pub fn nutty_id(&self) -> &AnyNuttyId {
+	pub fn nutty_id(&self) -> &DissociatedNuttyId {
 		&self.nutty_id
 	}
 
@@ -173,12 +173,12 @@ mod tests {
 	#[test]
 	fn test_display_trait() {
 		// A simple tag.
-		let nutty_id = AnyNuttyId::new("abcdefg").unwrap();
+		let nutty_id = DissociatedNuttyId::new("abcdefg").unwrap();
 		let tag = NuttyTag::new(nutty_id, None);
 		assert_eq!(format!("{tag}"), "[[abcdefg]]");
 
 		// A tag with display text.
-		let nutty_id = AnyNuttyId::new("abcdefg").unwrap();
+		let nutty_id = DissociatedNuttyId::new("abcdefg").unwrap();
 		let tag = NuttyTag::new(nutty_id, Some("Display Text".to_string()));
 		assert_eq!(format!("{tag}"), "[[abcdefg|Display Text]]");
 	}
@@ -285,7 +285,7 @@ mod tests {
 			  id in valid_nutty_id(),
 			  display_option in proptest::option::of("[^|]{1,100}")
 		 ) {
-			  let nutty_id = AnyNuttyId::new(&id).unwrap();
+			  let nutty_id = DissociatedNuttyId::new(&id).unwrap();
 			  let tag = NuttyTag::new(nutty_id, display_option.clone().map(|s| s.trim().to_string()));
 			  let tag_str = format!("{tag}");
 			  let parsed = NuttyTag::parse(&tag_str).unwrap();
