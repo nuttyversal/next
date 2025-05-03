@@ -1,3 +1,3 @@
 pub mod content;
-pub mod models;
+pub mod response;
 pub mod state;

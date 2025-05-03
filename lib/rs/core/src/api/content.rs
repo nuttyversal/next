@@ -6,8 +6,8 @@ use axum::extract::Path;
 use axum::extract::State;
 use axum::routing::get;
 
-use crate::api::models::Error;
-use crate::api::models::Response;
+use crate::api::response::Error;
+use crate::api::response::Response;
 use crate::api::state::AppState;
 use crate::models::ContentContext;
 use crate::models::DissociatedNuttyId;
