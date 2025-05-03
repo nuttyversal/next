@@ -39,7 +39,7 @@ impl NuttyId {
 	/// Get the Nutty ID.
 	pub fn nid(&self) -> String {
 		let last_41_bits = extract_last_41_bits(&self.uuid);
-		encode_base_58(last_41_bits)
+		encode_base_58(last_41_bits, 7)
 	}
 
 	/// Get the Unix timestamp (in milliseconds) encoded in the UUIDv7.
@@ -66,7 +66,8 @@ impl Serialize for NuttyId {
 	where
 		S: serde::Serializer,
 	{
-		let uuid = self.uuid.to_string();
+		let uuid = self.uuid.as_u128();
+		let uuid = encode_base_58(uuid, 22);
 		let nid = self.nid();
 		serializer.serialize_str(&(uuid + ":" + &nid))
 	}
@@ -84,13 +85,16 @@ impl<'de> serde::Deserialize<'de> for NuttyId {
 
 		if parts.len() != 2 {
 			return Err(serde::de::Error::custom(
-				"Invalid format: expected <UUID>:<NID>",
+				"Invalid format: expected <BASE58-UUID>:<NID>",
 			));
 		}
 
-		// Parse the UUID.
-		let uuid = Uuid::parse_str(parts[0])
+		// Decode the UUID from base-58.
+		let uuid_u128 = decode_base_58(parts[0])
 			.map_err(|e| serde::de::Error::custom(format!("Invalid UUID: {e}")))?;
+
+		// Convert the u128 to a UUID.
+		let uuid = Uuid::from_u128(uuid_u128);
 
 		// Create the Nutty ID.
 		let nutty_id = NuttyId::new(uuid);
@@ -190,31 +194,33 @@ fn is_valid_nutty_id(id: &str) -> bool {
 }
 
 /// Extract the last 41 bits of a UUID.
-fn extract_last_41_bits(uuid: &Uuid) -> u64 {
+fn extract_last_41_bits(uuid: &Uuid) -> u128 {
 	let bytes = uuid.as_bytes();
 
 	// Extract the last bit (41) from the 6th byte from the end,
 	// plus all the bits (1..40) from the last 5 bytes.
-	(((bytes[10] & 0x01) as u64) << 40)
-		| ((bytes[11] as u64) << 32)
-		| ((bytes[12] as u64) << 24)
-		| ((bytes[13] as u64) << 16)
-		| ((bytes[14] as u64) << 8)
-		| (bytes[15] as u64)
+	(((bytes[10] & 0x01) as u128) << 40)
+		| ((bytes[11] as u128) << 32)
+		| ((bytes[12] as u128) << 24)
+		| ((bytes[13] as u128) << 16)
+		| ((bytes[14] as u128) << 8)
+		| (bytes[15] as u128)
 }
 
-/// Encode a u64 value to a base-58 string in big-endian order.
-fn encode_base_58(value: u64) -> String {
-	const FIXED_LENGTH: usize = 7;
-	const BASE: u64 = 58;
+/// Encode a u128 value to a base-58 string in big-endian order.
+///
+/// If the resulting string is less than `pad_width`, then the
+/// remaining space will be padded with "1"s.
+fn encode_base_58(value: u128, pad_width: usize) -> String {
+	const BASE: u128 = 58;
 
 	// Special case for 0.
 	if value == 0 {
-		return "1".repeat(FIXED_LENGTH);
+		return "1".repeat(pad_width);
 	}
 
 	// Convert to base-58 in little-endian order.
-	let mut digits = Vec::with_capacity(FIXED_LENGTH);
+	let mut digits = Vec::with_capacity(pad_width);
 	let mut remaining = value;
 
 	while remaining > 0 {
@@ -222,8 +228,8 @@ fn encode_base_58(value: u64) -> String {
 		remaining /= BASE;
 	}
 
-	let padding_length = FIXED_LENGTH.saturating_sub(digits.len());
-	let mut result = String::with_capacity(FIXED_LENGTH);
+	let padding_length = pad_width.saturating_sub(digits.len());
+	let mut result = String::with_capacity(pad_width);
 
 	// Left pad with ones. Look, no package needed. 👀
 	// https://en.wikipedia.org/wiki/Npm_left-pad_incident
@@ -237,6 +243,37 @@ fn encode_base_58(value: u64) -> String {
 	}
 
 	result
+}
+
+/// Decode a base-58 string to a u128 value.
+fn decode_base_58(input: &str) -> Result<u128, DecodeError> {
+	const BASE: u128 = 58;
+
+	if input.is_empty() {
+		return Err(DecodeError::InvalidInput("<empty>".to_string()));
+	}
+
+	let mut result: u128 = 0;
+
+	for c in input.chars() {
+		let digit = match BASE_58_ALPHABET.iter().position(|&x| x == c) {
+			Some(pos) => pos as u128,
+			None => return Err(DecodeError::InvalidCharacter(c)),
+		};
+
+		result = result * BASE + digit;
+	}
+
+	Ok(result)
+}
+
+#[derive(Debug, Error)]
+pub enum DecodeError {
+	#[error("Invalid character '{0}' in base-58 string")]
+	InvalidCharacter(char),
+
+	#[error("Invalid input string: {0}")]
+	InvalidInput(String),
 }
 
 #[derive(Debug, Error)]
@@ -323,7 +360,7 @@ mod tests {
 		let correct_nid = nutty_id.nid();
 
 		// Test case 0: Valid UUID and NID.
-		let well_formed = format!("{uuid}:{correct_nid}");
+		let well_formed = format!("{}:{correct_nid}", encode_base_58(uuid.as_u128(), 22));
 		let result: Result<NuttyId, _> = serde_json::from_str(&format!("\"{well_formed}\""));
 		assert!(result.is_ok());
 
@@ -389,7 +426,7 @@ mod tests {
 
 			// If the value is small enough,
 			// then it should be left-padded.
-			if value < 58u64.pow(6) {
+			if value < 58u128.pow(6) {
 				let leading_ones = nutty_id.nid().chars().take_while(|&c| c == '1').count();
 				assert!(leading_ones > 0);
 			}
@@ -448,7 +485,7 @@ mod tests {
 		let nutty_id = NuttyId::new(uuid);
 
 		// Calculate the expected maximum value.
-		let max_value = (1u64 << 41) - 1;
+		let max_value = (1u128 << 41) - 1;
 		let extracted = extract_last_41_bits(&uuid);
 
 		// The extracted value should match the maximum value.
