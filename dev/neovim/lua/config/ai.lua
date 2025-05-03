@@ -5,6 +5,9 @@ vim.keymap.set({ "n", "v" }, "<Leader>tai", "<Cmd>CodeCompanionChat Toggle<CR>",
 vim.keymap.set({ "n", "v" }, "<Leader>ai", "<Cmd>CodeCompanionActions<CR>", { desc = "Open CodeCompanion actions" })
 vim.keymap.set("v", "<Leader>aa", "<Cmd>CodeCompanionChat Add<CR>", { desc = "Add selection to chat" })
 
+-- Command-mode abbreviation: cc → CodeCompanion.
+vim.cmd([[cab cc CodeCompanion]])
+
 codecompanion.setup({
 	display = {
 		chat = {
