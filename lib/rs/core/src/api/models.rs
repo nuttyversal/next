@@ -82,7 +82,7 @@ impl Error {
 				// Since we lose concrete type information on a `&dyn Error`,
 				// we use the {:?} representation to identify the error type.
 				// E.g., QueryError { source: RowNotFound } → QueryError.
-				let type_name = format!("{:?}", source_err)
+				let type_name = format!("{source_err:?}")
 					.split(' ')
 					.next()
 					.unwrap_or("UnknownError")

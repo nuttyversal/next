@@ -47,7 +47,7 @@ async fn content_context_handler(
 
 	let block_context = state
 		.content_service
-		.get_content_block_context(&block_id.into())
+		.get_content_block_context(&block_id)
 		.await;
 
 	match block_context {
