@@ -90,6 +90,7 @@ vim.opt.foldcolumn = "0"
 vim.cmd("colorscheme nuttyverse")
 vim.opt.cursorline = true
 vim.opt.termguicolors = true
+vim.opt.winborder = "single"
 
 -- Remove the tilde (~) characters at the end of the buffer.
 vim.opt.fillchars = {

@@ -1,11 +1,11 @@
 {
 	"blink.cmp": {
 		"branch": "main",
-		"commit": "75cadbcd2657ed01326ca2b0e5e4d78a77127ca3"
+		"commit": "4f38ce99a472932d5776337f08f7a8180f1f571a"
 	},
 	"codecompanion.nvim": {
 		"branch": "main",
-		"commit": "461459750d4a72e512a5c43eeb60e49b931b17de"
+		"commit": "3f133e8656e7f018d3c07048eec3f0b317e17879"
 	},
 	"conform.nvim": {
 		"branch": "master",
@@ -17,7 +17,7 @@
 	},
 	"neogit": {
 		"branch": "master",
-		"commit": "9bb1e73c534f767607e0a888f3de4c942825c501"
+		"commit": "68718853a9973e266021be7ce0780546104773b9"
 	},
 	"nvim-surround": {
 		"branch": "main",
@@ -29,11 +29,11 @@
 	},
 	"nvim-treesitter": {
 		"branch": "master",
-		"commit": "3b308861a8d7d7bfbe9be51d52e54dcfd9fe3d38"
+		"commit": "94ea4f436d2b59c80f02e293466c374584f03b8c"
 	},
 	"nvim-web-devicons": {
 		"branch": "master",
-		"commit": "50b5b06bff13a9b4eab946de7c7033649a6618a1"
+		"commit": "2c2b4eafce6cdd0cb165036faa17396eff18f847"
 	},
 	"outline.nvim": {
 		"branch": "main",

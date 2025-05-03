@@ -1,33 +1,43 @@
---- @diagnostic disable: missing-fields
 local blink = require("blink.cmp")
 
 blink.setup({
-	keymap = "default",
-	nerd_font_variant = "mono",
+	keymap = {
+		preset = "default",
+	},
 
-	-- Show function signature hints.
-	-- Useful for referencing parameter types.
-	trigger = {
-		signature_help = {
-			enabled = true,
+	appearance = {
+		nerd_font_variant = "mono",
+	},
+
+	completion = {
+		documentation = {
+			auto_show = true,
+		},
+
+		trigger = {
 			show_on_insert_on_trigger_character = true,
 		},
 	},
 
-	windows = {
-		autocomplete = {
-			border = "single",
+	signature = {
+		enabled = true,
+		show_on_insert_on_trigger_character = true,
+	},
+
+	fuzzy = {
+		implementation = "lua",
+	},
+
+	sources = {
+		default = {
+			"lsp",
+			"buffer",
+			"snippets",
+			"path",
 		},
 
-		documentation = {
-			border = "single",
-			auto_show = true,
-			auto_show_delay_ms = 500,
-			update_delay_ms = 50,
-		},
-
-		signature_help = {
-			border = "single",
+		per_filetype = {
+			codecompanion = { "codecompanion" },
 		},
 	},
 })
