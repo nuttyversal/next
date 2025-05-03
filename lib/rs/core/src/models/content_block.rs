@@ -1,5 +1,6 @@
 use chrono::DateTime;
 use chrono::Utc;
+use serde::Deserialize;
 use serde::Serialize;
 use thiserror::Error;
 
@@ -8,7 +9,7 @@ use crate::models::FractionalIndex;
 use crate::models::NuttyId;
 
 /// A block of content in the Nuttyverse.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContentBlock {
 	nutty_id: NuttyId,
 	pub parent_id: Option<NuttyId>,

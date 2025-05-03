@@ -5,10 +5,12 @@ use axum::Router;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::routing::get;
+use axum::routing::put;
 
 use crate::api::response::Error;
 use crate::api::response::Response;
 use crate::api::state::AppState;
+use crate::models::ContentBlock;
 use crate::models::ContentContext;
 use crate::models::DissociatedNuttyId;
 use crate::models::nutty_id::NuttyIdError;
@@ -17,6 +19,7 @@ use crate::services::ContentServiceError;
 /// The router for content API endpoints.
 pub fn router(app_state: Arc<AppState>) -> Router {
 	Router::new()
+		.route("/content-block/{block_id}", put(content_block_handler))
 		.route(
 			"/content-block/{block_id}/context",
 			get(content_context_handler),
@@ -26,8 +29,8 @@ pub fn router(app_state: Arc<AppState>) -> Router {
 
 /// An API handler for fetching the [BlockContext] for a given [ContentBlock].
 async fn content_context_handler(
-	Path(block_id): Path<String>,
 	State(state): State<Arc<AppState>>,
+	Path(block_id): Path<String>,
 ) -> Json<Response<ContentContext>> {
 	let block_id = DissociatedNuttyId::new(&block_id);
 
@@ -67,6 +70,58 @@ async fn content_context_handler(
 	}
 }
 
+/// An API handler for upserting a [ContentBlock].
+async fn content_block_handler(
+	State(state): State<Arc<AppState>>,
+	Path(block_id): Path<String>,
+	Json(payload): Json<ContentBlock>,
+) -> Json<Response<ContentBlock>> {
+	// Parse the block ID.
+	let block_id = match DissociatedNuttyId::new(&block_id) {
+		Ok(id) => id,
+		Err(error) => {
+			let summary = "Failed to save content block.";
+			let error = ContentApiError::LookupBlockContext(error);
+			let error = Error::from_error(&error).with_summary(summary);
+
+			return Json(Response::Error {
+				errors: vec![error],
+			});
+		}
+	};
+
+	// Verify the block ID matches the payload.
+	if block_id.nid() != payload.nutty_id().nid() {
+		let error = ContentApiError::BlockIdMismatch(
+			"The block ID in the URL does not match the payload".to_string(),
+		);
+
+		let summary = "Failed to save content block.";
+		let error = Error::from_error(&error).with_summary(summary);
+
+		return Json(Response::Error {
+			errors: vec![error],
+		});
+	}
+
+	// Save the content block.
+	match state.content_service.save_content_block(payload).await {
+		Ok(content_block) => Json(Response::Single {
+			data: Some(content_block),
+		}),
+
+		Err(error) => {
+			let summary = "Failed to save content block.";
+			let error = ContentApiError::QueryBlockContext(error);
+			let error = Error::from_error(&error).with_summary(summary);
+
+			Json(Response::Error {
+				errors: vec![error],
+			})
+		}
+	}
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum ContentApiError {
 	#[error("Unable to look up block context: {0}")]
@@ -74,4 +129,7 @@ pub enum ContentApiError {
 
 	#[error("Unable to query block context: {0}")]
 	QueryBlockContext(#[from] ContentServiceError),
+
+	#[error("Block ID mismatch: {0}")]
+	BlockIdMismatch(String),
 }
