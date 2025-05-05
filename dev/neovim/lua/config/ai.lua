@@ -17,6 +17,7 @@ codecompanion.setup({
 
 		chat = {
 			intro_message = "Hi Nutty, welcome back! Press ? for options.",
+			show_settings = true,
 
 			window = {
 				-- Open chat on the right side.
