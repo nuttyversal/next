@@ -40,35 +40,36 @@ vim.api.nvim_create_autocmd({ "LspAttach" }, {
 		local lsp_client = vim.lsp.get_client_by_id(args.data.client_id)
 
 		if lsp_client ~= nil then
-			if lsp_client.supports_method("textDocument/definition") then
+			if lsp_client:supports_method("textDocument/definition") then
 				vim.keymap.set("n", "gd", telescope_builtin.lsp_definitions)
 			end
 
-			if lsp_client.supports_method("textDocument/references") then
+			if lsp_client:supports_method("textDocument/references") then
 				vim.keymap.set("n", "gr", telescope_builtin.lsp_references)
 			end
 
-			if lsp_client.supports_method("textDocument/implementation") then
+			if lsp_client:supports_method("textDocument/implementation") then
 				vim.keymap.set("n", "gi", telescope_builtin.lsp_implementations)
 			end
 
-			if lsp_client.supports_method("textDocument/codeAction") then
-				vim.keymap.set("n", "<Space>ca", vim.lsp.buf.code_action)
+			if lsp_client:supports_method("textDocument/codeAction") then
+				vim.keymap.set("n", "<Space>ca", vim.lsp.buf.code_action, { buffer = bufnr })
 			end
 
-			if lsp_client.supports_method("textDocument/codeLens") then
-				vim.keymap.set("n", "<Space>cc", vim.lsp.codelens.run)
+			if lsp_client:supports_method("textDocument/codeLens") then
+				vim.keymap.set("n", "<Space>cc", vim.lsp.codelens.run, { buffer = bufnr })
 
 				-- Auto-refresh code lenses.
 				vim.api.nvim_create_autocmd({ "TextChanged", "InsertLeave" }, {
+					buffer = bufnr,
 					callback = function()
 						vim.lsp.codelens.refresh()
 					end,
 				})
 			end
 
-			if lsp_client.supports_method("textDocument/rename") then
-				vim.keymap.set("n", "<Space>cr", vim.lsp.buf.rename)
+			if lsp_client:supports_method("textDocument/rename") then
+				vim.keymap.set("n", "<Space>cr", vim.lsp.buf.rename, { buffer = bufnr })
 			end
 		end
 
@@ -81,11 +82,6 @@ vim.api.nvim_create_autocmd({ "LspAttach" }, {
 		vim.keymap.set("n", "<Leader>e", function()
 			vim.diagnostic.open_float({ border = "rounded" })
 		end, { noremap = true })
-
-		-- Draw borders around floating documentation windows.
-		vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
-			border = "rounded",
-		})
 	end,
 })
 
