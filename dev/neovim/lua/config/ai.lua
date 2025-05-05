@@ -10,6 +10,11 @@ vim.cmd([[cab cc CodeCompanion]])
 
 codecompanion.setup({
 	display = {
+		diff = {
+			enabled = true,
+			provider = "mini_diff",
+		},
+
 		chat = {
 			intro_message = "Hi Nutty, welcome back! Press ? for options.",
 

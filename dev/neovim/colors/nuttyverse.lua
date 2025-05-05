@@ -390,6 +390,23 @@ local function set_highlights_for_diagnostics()
 	vim.api.nvim_set_hl(0, "DiagnosticUnderlineOk", { fg = colors.green11, underline = true })
 end
 
+local function set_highlights_for_mini_diff()
+	vim.api.nvim_set_hl(0, "MiniDiffOverAdd", {
+		fg = colors.green11,
+		bg = colors.green01,
+	})
+
+	vim.api.nvim_set_hl(0, "MiniDiffOverDelete", {
+		fg = colors.red11,
+		bg = colors.red01,
+	})
+
+	vim.api.nvim_set_hl(0, "MiniDiffOverChange", {
+		fg = colors.gray10,
+		bg = colors.gray03,
+	})
+end
+
 local function set_highlights_for_neogit()
 	vim.api.nvim_set_hl(0, "NeogitCursorLine", {
 		fg = colors.gray12,
@@ -484,6 +501,7 @@ end
 
 set_highlights()
 set_highlights_for_diagnostics()
+set_highlights_for_mini_diff()
 set_highlights_for_neogit()
 set_highlights_for_nvim_tree()
 set_highlights_for_telescope()

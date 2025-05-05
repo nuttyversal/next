@@ -15,6 +15,10 @@
 		"branch": "main",
 		"commit": "4516612fe98ff56ae0415a259ff6361a89419b0a"
 	},
+	"mini.diff": {
+		"branch": "main",
+		"commit": "7e268d0241255abaa07b8aa0ddff028f7315fe21"
+	},
 	"neogit": {
 		"branch": "master",
 		"commit": "68718853a9973e266021be7ce0780546104773b9"
