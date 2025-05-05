@@ -954,7 +954,7 @@ mod tests {
 		let repo = ContentRepository::new(pool);
 
 		// Arrange: Create test content blocks.
-		let block1 = ContentBlock::now(
+		let block_1 = ContentBlock::now(
 			None,
 			FractionalIndex::start(),
 			BlockContent::Page {
@@ -962,9 +962,9 @@ mod tests {
 			},
 		);
 
-		let block2 = ContentBlock::now(
+		let block_2 = ContentBlock::now(
 			None,
-			FractionalIndex::between(&block1.f_index, &FractionalIndex::end()).unwrap(),
+			FractionalIndex::between(&block_1.f_index, &FractionalIndex::end()).unwrap(),
 			BlockContent::Page {
 				title: "Test Page 2".to_string(),
 			},
@@ -972,19 +972,19 @@ mod tests {
 
 		// Act: Save the content blocks.
 		repo
-			.upsert_content_block(block1.clone())
+			.upsert_content_block(block_1.clone())
 			.await
 			.expect("Failed to save block1");
 
 		repo
-			.upsert_content_block(block2.clone())
+			.upsert_content_block(block_2.clone())
 			.await
 			.expect("Failed to save block2");
 
 		// Act: Create a mix of existing and non-existent Nutty IDs.
 		let ids = [
-			block1.nutty_id().dissociate(),
-			DissociatedNuttyId::new(&block2.nutty_id().nid())
+			block_1.nutty_id().dissociate(),
+			DissociatedNuttyId::new(&block_2.nutty_id().nid())
 				.expect("Failed to create dissociated ID"),
 			NuttyId::now().dissociate(),
 			DissociatedNuttyId::new("1111111").expect("Failed to create dissociated ID"),
@@ -995,8 +995,8 @@ mod tests {
 
 		// Assert: Only the IDs that exist in the database are returned.
 		assert_eq!(resolved.len(), 2);
-		assert!(resolved.contains(block1.nutty_id()));
-		assert!(resolved.contains(block2.nutty_id()));
+		assert!(resolved.contains(block_1.nutty_id()));
+		assert!(resolved.contains(block_2.nutty_id()));
 	}
 
 	#[tokio::test]
@@ -1014,7 +1014,7 @@ mod tests {
 			},
 		);
 
-		let target_block1 = ContentBlock::now(
+		let target_block_1 = ContentBlock::now(
 			None,
 			FractionalIndex::between(&source_block.f_index, &FractionalIndex::end()).unwrap(),
 			BlockContent::Page {
@@ -1022,9 +1022,9 @@ mod tests {
 			},
 		);
 
-		let target_block2 = ContentBlock::now(
+		let target_block_2 = ContentBlock::now(
 			None,
-			FractionalIndex::between(&target_block1.f_index, &FractionalIndex::end()).unwrap(),
+			FractionalIndex::between(&target_block_1.f_index, &FractionalIndex::end()).unwrap(),
 			BlockContent::Page {
 				title: "Target Page 2".to_string(),
 			},
@@ -1037,59 +1037,59 @@ mod tests {
 			.expect("Failed to save source block");
 
 		repo
-			.upsert_content_block(target_block1.clone())
+			.upsert_content_block(target_block_1.clone())
 			.await
 			.expect("Failed to save target block 1");
 
 		repo
-			.upsert_content_block(target_block2.clone())
+			.upsert_content_block(target_block_2.clone())
 			.await
 			.expect("Failed to save target block 2");
 
 		// Act: Create content links between the blocks.
-		let link1 = ContentLink::now(*source_block.nutty_id(), *target_block1.nutty_id());
-		let link2 = ContentLink::now(*source_block.nutty_id(), *target_block2.nutty_id());
+		let link_1 = ContentLink::now(*source_block.nutty_id(), *target_block_1.nutty_id());
+		let link_2 = ContentLink::now(*source_block.nutty_id(), *target_block_2.nutty_id());
 
 		repo
-			.upsert_content_link(link1.clone())
+			.upsert_content_link(link_1.clone())
 			.await
 			.expect("Failed to create link 1");
 
 		repo
-			.upsert_content_link(link2.clone())
+			.upsert_content_link(link_2.clone())
 			.await
 			.expect("Failed to create link 2");
 
 		// Assert: Both links exist initially.
 		assert!(
 			repo
-				.is_linked(source_block.nutty_id(), target_block1.nutty_id())
+				.is_linked(source_block.nutty_id(), target_block_1.nutty_id())
 				.await
 				.expect("Failed to check link 1")
 		);
 		assert!(
 			repo
-				.is_linked(source_block.nutty_id(), target_block2.nutty_id())
+				.is_linked(source_block.nutty_id(), target_block_2.nutty_id())
 				.await
 				.expect("Failed to check link 2")
 		);
 
 		// Act: Delete orphaned links, keeping only link1.
 		repo
-			.delete_orphaned_content_links(source_block.nutty_id(), &[*target_block1.nutty_id()])
+			.delete_orphaned_content_links(source_block.nutty_id(), &[*target_block_1.nutty_id()])
 			.await
 			.expect("Failed to delete orphaned links");
 
 		// Assert: Only link1 remains.
 		assert!(
 			repo
-				.is_linked(source_block.nutty_id(), target_block1.nutty_id())
+				.is_linked(source_block.nutty_id(), target_block_1.nutty_id())
 				.await
 				.expect("Failed to check link 1")
 		);
 		assert!(
 			!repo
-				.is_linked(source_block.nutty_id(), target_block2.nutty_id())
+				.is_linked(source_block.nutty_id(), target_block_2.nutty_id())
 				.await
 				.expect("Failed to check link 2")
 		);
@@ -1110,7 +1110,7 @@ mod tests {
 			},
 		);
 
-		let target_block1 = ContentBlock::now(
+		let target_block_1 = ContentBlock::now(
 			None,
 			FractionalIndex::between(&source_block.f_index, &FractionalIndex::end()).unwrap(),
 			BlockContent::Page {
@@ -1118,9 +1118,9 @@ mod tests {
 			},
 		);
 
-		let target_block2 = ContentBlock::now(
+		let target_block_2 = ContentBlock::now(
 			None,
-			FractionalIndex::between(&target_block1.f_index, &FractionalIndex::end()).unwrap(),
+			FractionalIndex::between(&target_block_1.f_index, &FractionalIndex::end()).unwrap(),
 			BlockContent::Page {
 				title: "Target Page 2".to_string(),
 			},
@@ -1133,19 +1133,19 @@ mod tests {
 			.expect("Failed to save source block");
 
 		repo
-			.upsert_content_block(target_block1.clone())
+			.upsert_content_block(target_block_1.clone())
 			.await
 			.expect("Failed to save target block 1");
 
 		repo
-			.upsert_content_block(target_block2.clone())
+			.upsert_content_block(target_block_2.clone())
 			.await
 			.expect("Failed to save target block 2");
 
 		// Act: Create multiple content links.
 		let links = vec![
-			ContentLink::now(*source_block.nutty_id(), *target_block1.nutty_id()),
-			ContentLink::now(*source_block.nutty_id(), *target_block2.nutty_id()),
+			ContentLink::now(*source_block.nutty_id(), *target_block_1.nutty_id()),
+			ContentLink::now(*source_block.nutty_id(), *target_block_2.nutty_id()),
 		];
 
 		// Act: Save the links in bulk.
@@ -1161,15 +1161,15 @@ mod tests {
 		for saved_link in saved_links {
 			assert_eq!(saved_link.source_id, *source_block.nutty_id());
 			assert!(
-				saved_link.target_id == *target_block1.nutty_id()
-					|| saved_link.target_id == *target_block2.nutty_id()
+				saved_link.target_id == *target_block_1.nutty_id()
+					|| saved_link.target_id == *target_block_2.nutty_id()
 			);
 		}
 
 		// Act: Try to save duplicate links (should be ignored due to unique constraint).
 		let duplicate_links = vec![
-			ContentLink::now(*source_block.nutty_id(), *target_block1.nutty_id()),
-			ContentLink::now(*source_block.nutty_id(), *target_block2.nutty_id()),
+			ContentLink::now(*source_block.nutty_id(), *target_block_1.nutty_id()),
+			ContentLink::now(*source_block.nutty_id(), *target_block_2.nutty_id()),
 		];
 
 		let saved_duplicates = repo
@@ -1305,7 +1305,7 @@ mod tests {
 			},
 		);
 
-		let child_block1 = ContentBlock::now(
+		let child_block_1 = ContentBlock::now(
 			Some(*parent_block.nutty_id()),
 			FractionalIndex::between(&FractionalIndex::start(), &FractionalIndex::end()).unwrap(),
 			BlockContent::Page {
@@ -1313,16 +1313,16 @@ mod tests {
 			},
 		);
 
-		let child_block2 = ContentBlock::now(
+		let child_block_2 = ContentBlock::now(
 			Some(*parent_block.nutty_id()),
-			FractionalIndex::between(&child_block1.f_index, &FractionalIndex::end()).unwrap(),
+			FractionalIndex::between(&child_block_1.f_index, &FractionalIndex::end()).unwrap(),
 			BlockContent::Page {
 				title: "Child Page 2".to_string(),
 			},
 		);
 
 		let grandchild_block = ContentBlock::now(
-			Some(*child_block1.nutty_id()),
+			Some(*child_block_1.nutty_id()),
 			FractionalIndex::start(),
 			BlockContent::Page {
 				title: "Grandchild Page".to_string(),
@@ -1336,12 +1336,12 @@ mod tests {
 			.expect("Failed to save parent block");
 
 		repo
-			.upsert_content_block(child_block1.clone())
+			.upsert_content_block(child_block_1.clone())
 			.await
 			.expect("Failed to save child block 1");
 
 		repo
-			.upsert_content_block(child_block2.clone())
+			.upsert_content_block(child_block_2.clone())
 			.await
 			.expect("Failed to save child block 2");
 
@@ -1361,12 +1361,12 @@ mod tests {
 		assert!(
 			descendants
 				.iter()
-				.any(|block| block.nutty_id() == child_block1.nutty_id())
+				.any(|block| block.nutty_id() == child_block_1.nutty_id())
 		);
 		assert!(
 			descendants
 				.iter()
-				.any(|block| block.nutty_id() == child_block2.nutty_id())
+				.any(|block| block.nutty_id() == child_block_2.nutty_id())
 		);
 		assert!(
 			descendants
@@ -1375,27 +1375,27 @@ mod tests {
 		);
 
 		// Act: Get the descendants of child block 1.
-		let child1_descendants = repo
-			.get_descendant_blocks(&child_block1.nutty_id().into())
+		let child_1_descendants = repo
+			.get_descendant_blocks(&child_block_1.nutty_id().into())
 			.await
 			.expect("Failed to get descendants of child 1");
 
 		// Assert: The descendants include only the grandchild block.
-		assert_eq!(child1_descendants.len(), 1);
+		assert_eq!(child_1_descendants.len(), 1);
 		assert!(
-			child1_descendants
+			child_1_descendants
 				.iter()
 				.any(|block| block.nutty_id() == grandchild_block.nutty_id())
 		);
 
 		// Act: Get the descendants of child block 2 (which has no descendants).
-		let child2_descendants = repo
-			.get_descendant_blocks(&child_block2.nutty_id().into())
+		let child_2_descendants = repo
+			.get_descendant_blocks(&child_block_2.nutty_id().into())
 			.await
 			.expect("Failed to get descendants of child 2");
 
 		// Assert: There are no descendants.
-		assert_eq!(child2_descendants.len(), 0);
+		assert_eq!(child_2_descendants.len(), 0);
 
 		// Act: Get the descendants of the grandchild block (which has no descendants).
 		let grandchild_descendants = repo
