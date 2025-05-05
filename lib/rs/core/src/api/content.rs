@@ -4,6 +4,7 @@ use axum::Json;
 use axum::Router;
 use axum::extract::Path;
 use axum::extract::State;
+use axum::http::StatusCode;
 use axum::routing::get;
 use axum::routing::put;
 
@@ -31,7 +32,7 @@ pub fn router(app_state: Arc<AppState>) -> Router {
 async fn content_context_handler(
 	State(state): State<Arc<AppState>>,
 	Path(block_id): Path<String>,
-) -> Json<Response<ContentContext>> {
+) -> (StatusCode, Json<Response<ContentContext>>) {
 	let block_id = DissociatedNuttyId::new(&block_id);
 
 	let block_id = match block_id {
@@ -42,9 +43,12 @@ async fn content_context_handler(
 			let error = ContentApiError::LookupBlockContext(error);
 			let error = Error::from_error(&error).with_summary(summary);
 
-			return Json(Response::Error {
-				errors: vec![error],
-			});
+			return (
+				StatusCode::BAD_REQUEST,
+				Json(Response::Error {
+					errors: vec![error],
+				}),
+			);
 		}
 	};
 
@@ -54,18 +58,24 @@ async fn content_context_handler(
 		.await;
 
 	match block_context {
-		Ok(block_context) => Json(Response::Single {
-			data: Some(block_context),
-		}),
+		Ok(block_context) => (
+			StatusCode::OK,
+			Json(Response::Single {
+				data: Some(block_context),
+			}),
+		),
 
 		Err(error) => {
 			let summary = "Failed to query block context.";
 			let error = ContentApiError::QueryBlockContext(error);
 			let error = Error::from_error(&error).with_summary(summary);
 
-			Json(Response::Error {
-				errors: vec![error],
-			})
+			(
+				StatusCode::INTERNAL_SERVER_ERROR,
+				Json(Response::Error {
+					errors: vec![error],
+				}),
+			)
 		}
 	}
 }
@@ -75,7 +85,7 @@ async fn content_block_handler(
 	State(state): State<Arc<AppState>>,
 	Path(block_id): Path<String>,
 	Json(payload): Json<ContentBlock>,
-) -> Json<Response<ContentBlock>> {
+) -> (StatusCode, Json<Response<ContentBlock>>) {
 	// Parse the block ID.
 	let block_id = match DissociatedNuttyId::new(&block_id) {
 		Ok(id) => id,
@@ -84,9 +94,12 @@ async fn content_block_handler(
 			let error = ContentApiError::LookupBlockContext(error);
 			let error = Error::from_error(&error).with_summary(summary);
 
-			return Json(Response::Error {
-				errors: vec![error],
-			});
+			return (
+				StatusCode::BAD_REQUEST,
+				Json(Response::Error {
+					errors: vec![error],
+				}),
+			);
 		}
 	};
 
@@ -99,25 +112,34 @@ async fn content_block_handler(
 		let summary = "Failed to save content block.";
 		let error = Error::from_error(&error).with_summary(summary);
 
-		return Json(Response::Error {
-			errors: vec![error],
-		});
+		return (
+			StatusCode::BAD_REQUEST,
+			Json(Response::Error {
+				errors: vec![error],
+			}),
+		);
 	}
 
 	// Save the content block.
 	match state.content_service.save_content_block(payload).await {
-		Ok(content_block) => Json(Response::Single {
-			data: Some(content_block),
-		}),
+		Ok(content_block) => (
+			StatusCode::OK,
+			Json(Response::Single {
+				data: Some(content_block),
+			}),
+		),
 
 		Err(error) => {
 			let summary = "Failed to save content block.";
 			let error = ContentApiError::QueryBlockContext(error);
 			let error = Error::from_error(&error).with_summary(summary);
 
-			Json(Response::Error {
-				errors: vec![error],
-			})
+			(
+				StatusCode::INTERNAL_SERVER_ERROR,
+				Json(Response::Error {
+					errors: vec![error],
+				}),
+			)
 		}
 	}
 }
