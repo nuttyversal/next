@@ -39,6 +39,10 @@ codecompanion.setup({
 				user = "Nutty",
 			},
 		},
+
+		inline = {
+			adapter = "anthropic",
+		},
 	},
 
 	opts = {
