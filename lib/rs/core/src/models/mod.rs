@@ -3,6 +3,7 @@ pub mod content_block;
 pub mod content_context;
 pub mod content_link;
 pub mod fractional_index;
+pub mod navigator;
 pub mod nutty_id;
 pub mod nutty_tag;
 

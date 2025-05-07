@@ -24,5 +24,8 @@ thiserror = { version = "2" }
 # Testing.
 proptest = { version = "1.4.0" }
 
+# Security.
+argon2 = { version = "0.5" }
+
 [toolchain]
 channel = "nightly"
