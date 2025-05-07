@@ -75,6 +75,31 @@ impl Navigator {
 
 		Ok(())
 	}
+
+	/// Get the Nutty ID.
+	pub fn nutty_id(&self) -> &NuttyId {
+		&self.nutty_id
+	}
+
+	/// Get the name.
+	pub fn name(&self) -> &str {
+		&self.name
+	}
+
+	/// Get the hashed password.
+	pub fn pass(&self) -> &str {
+		&self.pass
+	}
+
+	/// Get the "created_at" time.
+	pub fn created_at(&self) -> &DateTime<Utc> {
+		&self.created_at
+	}
+
+	/// Get the "updated_at" time.
+	pub fn updated_at(&self) -> &DateTime<Utc> {
+		&self.updated_at
+	}
 }
 
 #[derive(Debug, Error)]
