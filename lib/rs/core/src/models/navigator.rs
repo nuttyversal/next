@@ -26,6 +26,8 @@ pub struct Navigator {
 impl Navigator {
 	/// Register a new [Navigator] with a securely hashed password.
 	pub fn new(name: String, password: &str) -> Result<Self, NavigatorError> {
+		Navigator::validate_name(&name)?;
+
 		let salt = SaltString::generate(&mut OsRng);
 		let argon2 = Argon2::default();
 
@@ -51,6 +53,27 @@ impl Navigator {
 		})
 	}
 
+	/// Validate a navigator name against format requirements.
+	pub fn validate_name(name: &str) -> Result<(), NavigatorError> {
+		if name.len() < 4 || name.len() > 16 {
+			return Err(NavigatorError::InvalidName(format!(
+				"Name must be 4–16 characters (got {})",
+				name.len()
+			)));
+		}
+
+		if !name
+			.chars()
+			.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+		{
+			return Err(NavigatorError::InvalidName(
+				"Name must only contain lowercased alphanumeric characters & underscores".to_string(),
+			));
+		}
+
+		Ok(())
+	}
+
 	/// Verify a password attempt against the stored hash.
 	pub fn verify_password(&self, password: &str) -> bool {
 		let parsed_hash = match PasswordHash::new(&self.pass) {
@@ -65,6 +88,7 @@ impl Navigator {
 
 	/// Replace the existing name with a new name.
 	pub fn update_name(&mut self, new_name: &str) -> Result<(), NavigatorError> {
+		Navigator::validate_name(new_name)?;
 		self.name = new_name.to_string();
 
 		Ok(())
@@ -206,15 +230,8 @@ impl NavigatorBuilder {
 					Err(NavigatorBuilderError::MissingTimestampContext)
 				} else {
 					// If a plaintext password is provided, then that means
-					// that we are creating navigator.
-					Navigator::new(name, &password).map_err(|e| match e {
-						NavigatorError::PasswordHashingError(msg) => {
-							NavigatorBuilderError::PasswordHashingError(msg)
-						}
-						NavigatorError::InvalidTimestamp { timestamp } => {
-							NavigatorBuilderError::InvalidTimestamp { timestamp }
-						}
-					})
+					// that we are creating navigator with new Nutty ID.
+					Navigator::new(name, &password).map_err(NavigatorBuilderError::CreateNavigator)
 				}
 			}
 
@@ -235,6 +252,9 @@ pub enum NavigatorBuilderError {
 	#[error("Missing timestamp context")]
 	MissingTimestampContext,
 
+	#[error("Failed to create navigator: {0}")]
+	CreateNavigator(#[from] NavigatorError),
+
 	#[error("Invalid 'updated_at' value: Must be >= 'created_at'")]
 	InvalidUpdatedAt,
 
@@ -247,6 +267,9 @@ pub enum NavigatorBuilderError {
 
 #[derive(Debug, Error)]
 pub enum NavigatorError {
+	#[error("Invalid name format: {0}")]
+	InvalidName(String),
+
 	#[error("Invalid timestamp from Nutty ID: {timestamp}")]
 	InvalidTimestamp { timestamp: i64 },
 
@@ -257,6 +280,82 @@ pub enum NavigatorError {
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	#[test]
+	fn test_validate_name() {
+		// OK if name is valid.
+		assert!(Navigator::validate_name("user1").is_ok());
+		assert!(Navigator::validate_name("test_user").is_ok());
+		assert!(Navigator::validate_name("1234").is_ok()); // Exactly 4 chars.
+		assert!(Navigator::validate_name("1234567890123456").is_ok()); // Exactly 16 chars.
+		assert!(Navigator::validate_name("a_1_b_2").is_ok());
+
+		// Fail if too short.
+		let err = Navigator::validate_name("abc").unwrap_err();
+		match err {
+			NavigatorError::InvalidName(msg) => {
+				assert!(msg.contains("4–16 characters"));
+				assert!(msg.contains("(got 3)"));
+			}
+			_ => panic!("Expected InvalidName error for short name"),
+		}
+
+		// Fail if empty string.
+		let err = Navigator::validate_name("").unwrap_err();
+		match err {
+			NavigatorError::InvalidName(msg) => {
+				assert!(msg.contains("4–16 characters"));
+				assert!(msg.contains("(got 0)"));
+			}
+			_ => panic!("Expected InvalidName error for empty string"),
+		}
+
+		// Fail if too long.
+		let err = Navigator::validate_name("12345678901234567").unwrap_err(); // 17 chars.
+		match err {
+			NavigatorError::InvalidName(msg) => {
+				assert!(msg.contains("4–16 characters"));
+				assert!(msg.contains("(got 17)"));
+			}
+			_ => panic!("Expected InvalidName error for long name"),
+		}
+
+		// Fail if containing uppercase letters.
+		let err = Navigator::validate_name("User1").unwrap_err();
+		match err {
+			NavigatorError::InvalidName(msg) => {
+				assert!(msg.contains("lowercased alphanumeric"));
+			}
+			_ => panic!("Expected InvalidName error for uppercase letters"),
+		}
+
+		// Fail if containing special characters.
+		let err = Navigator::validate_name("user-name").unwrap_err();
+		match err {
+			NavigatorError::InvalidName(msg) => {
+				assert!(msg.contains("lowercased alphanumeric"));
+			}
+			_ => panic!("Expected InvalidName error for special characters"),
+		}
+
+		// Fail if containing spaces.
+		let err = Navigator::validate_name("user name").unwrap_err();
+		match err {
+			NavigatorError::InvalidName(msg) => {
+				assert!(msg.contains("lowercased alphanumeric"));
+			}
+			_ => panic!("Expected InvalidName error for space"),
+		}
+
+		// Fail if containing Unicode characters.
+		let err = Navigator::validate_name("user名").unwrap_err();
+		match err {
+			NavigatorError::InvalidName(msg) => {
+				assert!(msg.contains("lowercased alphanumeric"));
+			}
+			_ => panic!("Expected InvalidName error for unicode characters"),
+		}
+	}
 
 	#[test]
 	fn test_password_verification() {
@@ -310,7 +409,7 @@ mod tests {
 
 		// Test with special characters.
 		let special_password = "!@#$%^&*()_+{}|:<>?~";
-		let navigator = Navigator::new("special_char_user".to_string(), special_password).unwrap();
+		let navigator = Navigator::new("special_user".to_string(), special_password).unwrap();
 		assert!(navigator.verify_password(special_password));
 		assert!(!navigator.verify_password("wrong"));
 	}
@@ -339,7 +438,7 @@ mod tests {
 	fn test_invalid_password_hash() {
 		// Create a navigator with a valid password.
 		let password = "valid_password";
-		let mut navigator = Navigator::new("InvalidHashUser".to_string(), password).unwrap();
+		let mut navigator = Navigator::new("invalid_user".to_string(), password).unwrap();
 
 		// Manually corrupt the password hash.
 		navigator.pass = "not_a_valid_argon2_hash".to_string();
