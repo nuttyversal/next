@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::routing::get;
-use nuttyverse_core::api::content;
-use nuttyverse_core::api::navigator;
-use nuttyverse_core::api::state::AppState;
-use nuttyverse_core::repository::ContentRepository;
-use nuttyverse_core::repository::navigator::NavigatorRepository;
-use nuttyverse_core::services::ContentService;
-use nuttyverse_core::services::NavigatorService;
+use nuttyverse_core::content::api::router as content_router;
+use nuttyverse_core::content::repository::ContentRepository;
+use nuttyverse_core::content::service::ContentService;
+use nuttyverse_core::navigator::api::router as navigator_router;
+use nuttyverse_core::navigator::repository::NavigatorRepository;
+use nuttyverse_core::navigator::service::NavigatorService;
+use nuttyverse_core::utilities::api::state::AppState;
 use sqlx::postgres::PgPoolOptions;
 
 #[tokio::main]
@@ -32,12 +32,16 @@ async fn main() {
 	let content_service = ContentService::new(content_repository);
 	let navigator_repository = NavigatorRepository::new(database_pool.clone());
 	let navigator_service = NavigatorService::new(navigator_repository);
-	let app_state = Arc::new(AppState { content_service, navigator_service });
+
+	let app_state = Arc::new(AppState {
+		content_service,
+		navigator_service,
+	});
 
 	let router = Router::new()
 		.route("/", get(|| async { "Hello world!" }))
-		.merge(content::router(app_state.clone()))
-		.merge(navigator::router(app_state.clone()));
+		.merge(content_router(app_state.clone()))
+		.merge(navigator_router(app_state.clone()));
 
 	let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 	println!("Listening @ 0.0.0.0:3000…");

@@ -10,10 +10,11 @@ use crate::models::NuttyId;
 use crate::models::content_block::ContentBlockBuilderError;
 use crate::models::content_block::ContentBlockError;
 use crate::models::fractional_index::FractionalIndexError;
-use crate::repository::Repository;
+use crate::utilities::repository::Repository;
 
 /// A repository for content blocks.
 /// Objects are stored in PostgreSQL.
+#[derive(Clone)]
 pub struct ContentRepository {
 	/// The PostgreSQL database pool.
 	pool: sqlx::Pool<Postgres>,
@@ -731,13 +732,13 @@ mod tests {
 	use sqlx::Postgres;
 	use sqlx::postgres::PgPoolOptions;
 
+	use super::*;
 	use crate::models::BlockContent;
 	use crate::models::ContentBlock;
 	use crate::models::ContentLink;
 	use crate::models::DissociatedNuttyId;
 	use crate::models::FractionalIndex;
 	use crate::models::NuttyId;
-	use crate::repository::ContentRepository;
 
 	async fn connect_to_test_database() -> Pool<Postgres> {
 		PgPoolOptions::new()

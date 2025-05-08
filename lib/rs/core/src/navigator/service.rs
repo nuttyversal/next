@@ -1,8 +1,9 @@
 use crate::models::Navigator;
 use crate::models::navigator::NavigatorError;
-use crate::repository::navigator::NavigatorRepository;
-use crate::repository::navigator::NavigatorRepositoryError;
+use crate::navigator::repository::NavigatorRepository;
+use crate::navigator::repository::NavigatorRepositoryError;
 
+#[derive(Clone)]
 pub struct NavigatorService {
 	repository: NavigatorRepository,
 }

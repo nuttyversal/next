@@ -6,11 +6,11 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
 
-use crate::api::response::Error;
-use crate::api::response::Response;
-use crate::api::state::AppState;
 use crate::models::Navigator;
-use crate::services::NavigatorServiceError;
+use crate::navigator::service::NavigatorServiceError;
+use crate::utilities::api::response::Error;
+use crate::utilities::api::response::Response;
+use crate::utilities::api::state::AppState;
 
 /// The router for navigator API endpoints.
 pub fn router(app_state: Arc<AppState>) -> Router {

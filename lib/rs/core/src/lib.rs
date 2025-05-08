@@ -1,4 +1,4 @@
-pub mod api;
+pub mod content;
 pub mod models;
-pub mod repository;
-pub mod services;
+pub mod navigator;
+pub mod utilities;

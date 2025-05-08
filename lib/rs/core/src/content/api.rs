@@ -8,14 +8,14 @@ use axum::http::StatusCode;
 use axum::routing::get;
 use axum::routing::put;
 
-use crate::api::response::Error;
-use crate::api::response::Response;
-use crate::api::state::AppState;
+use crate::content::service::ContentServiceError;
 use crate::models::ContentBlock;
 use crate::models::ContentContext;
 use crate::models::DissociatedNuttyId;
 use crate::models::nutty_id::NuttyIdError;
-use crate::services::ContentServiceError;
+use crate::utilities::api::response::Error;
+use crate::utilities::api::response::Response;
+use crate::utilities::api::state::AppState;
 
 /// The router for content API endpoints.
 pub fn router(app_state: Arc<AppState>) -> Router {

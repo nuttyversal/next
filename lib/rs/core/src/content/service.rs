@@ -1,12 +1,13 @@
+use crate::content::repository::ContentRepository;
+use crate::content::repository::ContentRepositoryError;
 use crate::models::ContentBlock;
 use crate::models::ContentContext;
 use crate::models::ContentLink;
 use crate::models::DissociatedNuttyId;
-use crate::repository::ContentRepository;
-use crate::repository::ContentRepositoryError;
-use crate::repository::Repository;
-use crate::repository::repository::TransactionExt;
+use crate::utilities::repository::Repository;
+use crate::utilities::repository::TransactionExt;
 
+#[derive(Clone)]
 pub struct ContentService {
 	/// The content repository to use for storing and retrieving content.
 	repository: ContentRepository,
@@ -206,10 +207,10 @@ mod tests {
 	use sqlx::postgres::PgPoolOptions;
 
 	use super::*;
+	use crate::content::repository::ContentRepository;
 	use crate::models::BlockContent;
 	use crate::models::ContentBlock;
 	use crate::models::FractionalIndex;
-	use crate::repository::ContentRepository;
 
 	async fn connect_to_test_database() -> Pool<Postgres> {
 		PgPoolOptions::new()
