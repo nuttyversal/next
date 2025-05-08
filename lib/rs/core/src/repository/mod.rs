@@ -1,4 +1,5 @@
 pub mod content;
+pub mod navigator;
 pub mod repository;
 
 pub use content::ContentRepository;
