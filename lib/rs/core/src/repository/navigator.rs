@@ -58,7 +58,7 @@ impl NavigatorRepository {
 			.map_err(NavigatorRepositoryError::BuilderError)
 	}
 
-	/// Create a new navigator .
+	/// Create a new navigator.
 	pub async fn create_navigator(
 		&self,
 		navigator: Navigator,
