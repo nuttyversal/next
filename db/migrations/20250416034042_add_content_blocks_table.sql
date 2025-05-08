@@ -1,4 +1,6 @@
 -- migrate:up
+CREATE SCHEMA IF NOT EXISTS content;
+
 CREATE TABLE content.blocks (
 	id UUID PRIMARY KEY,
 	nutty_id VARCHAR(7) NOT NULL,
