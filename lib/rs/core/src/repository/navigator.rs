@@ -9,6 +9,7 @@ use crate::models::navigator::NavigatorError;
 
 /// A repository for navigator accounts.
 /// Objects are stored in PostgreSQL.
+#[derive(Debug, Clone)]
 pub struct NavigatorRepository {
 	/// The PostgreSQL database pool.
 	pool: sqlx::Pool<Postgres>,

@@ -59,7 +59,7 @@ mod tests {
 		// Arrange: Create a repository and service.
 		let pool = connect_to_test_database().await;
 		let repo = NavigatorRepository::new(pool);
-		let service = NavigatorService::new(repo);
+		let service = NavigatorService::new(repo.clone());
 
 		// Act: Register a new navigator.
 		let result = service
@@ -71,6 +71,12 @@ mod tests {
 		let navigator = result.unwrap();
 		assert_eq!(navigator.name(), "test_user");
 		assert!(navigator.verify_password("password123"));
+
+		// Cleanup: Delete the test navigator.
+		repo
+			.delete_navigator(navigator.nutty_id())
+			.await
+			.expect("Failed to delete test navigator");
 	}
 
 	#[tokio::test]
@@ -98,7 +104,7 @@ mod tests {
 		// Arrange: Create a repository and service.
 		let pool = connect_to_test_database().await;
 		let repo = NavigatorRepository::new(pool);
-		let service = NavigatorService::new(repo);
+		let service = NavigatorService::new(repo.clone());
 
 		// Act: Register a navigator.
 		let result_1 = service
@@ -106,6 +112,7 @@ mod tests {
 			.await;
 
 		assert!(result_1.is_ok());
+		let navigator = result_1.unwrap();
 
 		// Act: Try to register another navigator with the same name.
 		let result_2 = service
@@ -118,5 +125,11 @@ mod tests {
 			NavigatorServiceError::Insert(NavigatorRepositoryError::QueryFailed(_)) => (),
 			_ => panic!("Expected QueryFailed error for duplicate name"),
 		}
+
+		// Cleanup: Delete the test navigator.
+		repo
+			.delete_navigator(navigator.nutty_id())
+			.await
+			.expect("Failed to delete test navigator");
 	}
 }
