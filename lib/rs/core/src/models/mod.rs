@@ -6,6 +6,7 @@ pub mod fractional_index;
 pub mod navigator;
 pub mod nutty_id;
 pub mod nutty_tag;
+pub mod session;
 
 pub use block_content::BlockContent;
 pub use content_block::ContentBlock;
