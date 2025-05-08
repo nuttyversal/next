@@ -63,6 +63,13 @@ impl Navigator {
 			.is_ok()
 	}
 
+	/// Replace the existing name with a new name.
+	pub fn update_name(&mut self, new_name: &str) -> Result<(), NavigatorError> {
+		self.name = new_name.to_string();
+
+		Ok(())
+	}
+
 	/// Replace the existing password with a new password.
 	pub fn update_password(&mut self, new_password: &str) -> Result<(), NavigatorError> {
 		let salt = SaltString::generate(&mut OsRng);
@@ -74,6 +81,11 @@ impl Navigator {
 			.to_string();
 
 		Ok(())
+	}
+
+	/// Create a builder for a new navigator.
+	pub fn builder() -> NavigatorBuilder {
+		NavigatorBuilder::default()
 	}
 
 	/// Get the Nutty ID.
@@ -102,13 +114,144 @@ impl Navigator {
 	}
 }
 
+/// A builder for creating new navigators.
+#[derive(Default)]
+pub struct NavigatorBuilder {
+	nutty_id: Option<NuttyId>,
+	name: Option<String>,
+	password: Option<String>,
+	password_is_hashed: bool,
+	created_at: Option<DateTime<Utc>>,
+	updated_at: Option<DateTime<Utc>>,
+}
+
+impl NavigatorBuilder {
+	/// Set the Nutty ID.
+	pub fn nutty_id(mut self, nutty_id: NuttyId) -> Self {
+		self.nutty_id = Some(nutty_id);
+		self
+	}
+
+	/// Set the navigator name.
+	pub fn name(mut self, name: String) -> Self {
+		self.name = Some(name);
+		self
+	}
+
+	/// Set the plaintext password (will be hashed when building).
+	pub fn password(mut self, password: String) -> Self {
+		self.password = Some(password);
+		self
+	}
+
+	/// Set a pre-hashed password (will *not* be hashed again when building).
+	pub fn password_hash(mut self, hash: String) -> Self {
+		self.password = Some(hash);
+		self.password_is_hashed = true;
+		self
+	}
+
+	/// Set the "created at" time.
+	pub fn created_at(mut self, created_at: DateTime<Utc>) -> Self {
+		self.created_at = Some(created_at);
+		self
+	}
+
+	/// Set the "updated at" time.
+	pub fn updated_at(mut self, updated_at: DateTime<Utc>) -> Self {
+		self.updated_at = Some(updated_at);
+		self
+	}
+
+	/// Build the navigator, returning an error if required fields are not set.
+	pub fn try_build(self) -> Result<Navigator, NavigatorBuilderError> {
+		let name = self.name.ok_or(NavigatorBuilderError::MissingName)?;
+		let password = self
+			.password
+			.ok_or(NavigatorBuilderError::MissingPassword)?;
+
+		match (self.nutty_id, self.created_at, self.updated_at) {
+			// Either create the navigator with all timestamps …
+			(Some(nutty_id), Some(created_at), Some(updated_at)) => {
+				if updated_at < created_at {
+					return Err(NavigatorBuilderError::InvalidUpdatedAt);
+				}
+
+				let pass = if self.password_is_hashed {
+					password
+				} else {
+					let salt = SaltString::generate(&mut OsRng);
+					let argon2 = Argon2::default();
+
+					argon2
+						.hash_password(password.as_bytes(), &salt)
+						.map_err(|e| NavigatorBuilderError::PasswordHashingError(e.to_string()))?
+						.to_string()
+				};
+
+				Ok(Navigator {
+					nutty_id,
+					name,
+					pass,
+					created_at,
+					updated_at,
+				})
+			}
+
+			// … or with no timestamps at all. Generate them on the fly.
+			(None, None, None) => {
+				if self.password_is_hashed {
+					// If hydrating a navigator that has already been created,
+					// then all attributes need to be provided.
+					Err(NavigatorBuilderError::MissingTimestampContext)
+				} else {
+					// If a plaintext password is provided, then that means
+					// that we are creating navigator.
+					Navigator::new(name, &password).map_err(|e| match e {
+						NavigatorError::PasswordHashingError(msg) => {
+							NavigatorBuilderError::PasswordHashingError(msg)
+						}
+						NavigatorError::InvalidTimestamp { timestamp } => {
+							NavigatorBuilderError::InvalidTimestamp { timestamp }
+						}
+					})
+				}
+			}
+
+			// But, don't create the navigator with partial timestamp context.
+			(_, _, _) => Err(NavigatorBuilderError::MissingTimestampContext),
+		}
+	}
+}
+
 #[derive(Debug, Error)]
-pub enum NavigatorError {
-	#[error("Password hashing failed: {0}")]
-	PasswordHashingError(String),
+pub enum NavigatorBuilderError {
+	#[error("Name is required")]
+	MissingName,
+
+	#[error("Password is required")]
+	MissingPassword,
+
+	#[error("Missing timestamp context")]
+	MissingTimestampContext,
+
+	#[error("Invalid 'updated_at' value: Must be >= 'created_at'")]
+	InvalidUpdatedAt,
 
 	#[error("Invalid timestamp from Nutty ID: {timestamp}")]
 	InvalidTimestamp { timestamp: i64 },
+
+	#[error("Password hashing failed: {0}")]
+	PasswordHashingError(String),
+}
+
+#[derive(Debug, Error)]
+pub enum NavigatorError {
+	#[error("Invalid timestamp from Nutty ID: {timestamp}")]
+	InvalidTimestamp { timestamp: i64 },
+
+	#[error("Password hashing failed: {0}")]
+	PasswordHashingError(String),
 }
 
 #[cfg(test)]
@@ -204,5 +347,41 @@ mod tests {
 		// Verification should safely return false rather than panicking.
 		assert!(!navigator.verify_password(password));
 		assert!(!navigator.verify_password("any_other_password"));
+	}
+
+	#[test]
+	fn test_navigator_builder() {
+		// Create a navigator using the builder.
+		let navigator = Navigator::builder()
+			.name("test_user".to_string())
+			.password("correct horse battery staple".to_string())
+			.try_build()
+			.unwrap();
+
+		// Verify that the navigator was created correctly.
+		assert_eq!(navigator.name(), "test_user");
+		assert!(navigator.verify_password("correct horse battery staple"));
+	}
+
+	#[test]
+	fn test_navigator_builder_with_custom_fields() {
+		let nutty_id = NuttyId::now();
+		let now = Utc::now();
+		let later = now + chrono::Duration::seconds(10);
+
+		// Create a navigator with custom fields.
+		let navigator = Navigator::builder()
+			.name("custom_user".to_string())
+			.password("custom_password".to_string())
+			.nutty_id(nutty_id)
+			.created_at(now)
+			.updated_at(later)
+			.try_build()
+			.unwrap();
+
+		// Verify that the custom fields were set correctly.
+		assert_eq!(navigator.nutty_id(), &nutty_id);
+		assert_eq!(navigator.created_at(), &now);
+		assert_eq!(navigator.updated_at(), &later);
 	}
 }
