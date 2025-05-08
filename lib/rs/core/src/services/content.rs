@@ -8,12 +8,12 @@ use crate::repository::Repository;
 use crate::repository::repository::TransactionExt;
 
 pub struct ContentService {
-	// The content repository to use for storing and retrieving content.
+	/// The content repository to use for storing and retrieving content.
 	repository: ContentRepository,
 }
 
 impl ContentService {
-	// Create a new content service with the given repository.
+	/// Create a new content service with the given repository.
 	pub fn new(repository: ContentRepository) -> Self {
 		ContentService { repository }
 	}
