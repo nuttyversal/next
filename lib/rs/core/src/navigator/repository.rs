@@ -6,6 +6,8 @@ use crate::models::Navigator;
 use crate::models::NuttyId;
 use crate::models::navigator::NavigatorBuilderError;
 use crate::models::navigator::NavigatorError;
+use crate::models::session::Session;
+use crate::models::session::SessionBuilderError;
 
 /// A repository for navigator accounts.
 /// Objects are stored in PostgreSQL.
@@ -296,6 +298,53 @@ impl NavigatorRepository {
 	) -> Result<Option<Navigator>, NavigatorRepositoryError> {
 		self.authenticate_tx(&self.pool, name, password).await
 	}
+
+	/// Create a new session for a navigator.
+	pub async fn create_session_tx<'e, E>(
+		&self,
+		executor: E,
+		session: Session,
+	) -> Result<Session, NavigatorRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
+		// Insert the session record.
+		let record = sqlx::query!(
+			r#"
+				INSERT INTO auth.sessions (id, nutty_id, navigator_id, user_agent, expires_at, created_at, updated_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7)
+				RETURNING id, navigator_id, user_agent, expires_at, created_at, updated_at
+			"#,
+			session.nutty_id().uuid(),
+			session.nutty_id().nid(),
+			session.navigator_id().uuid(),
+			session.user_agent(),
+			session.expires_at(),
+			session.created_at(),
+			session.updated_at(),
+		)
+		.fetch_one(executor)
+		.await?;
+
+		// Reconstruct the session.
+		Ok(Session::builder()
+			.nutty_id(NuttyId::new(record.id))
+			.navigator_id(NuttyId::new(record.navigator_id))
+			.user_agent(record.user_agent)
+			.expires_at(record.expires_at)
+			.created_at(record.created_at)
+			.updated_at(record.updated_at)
+			.try_build()
+			.map_err(NavigatorRepositoryError::SessionBuilderError)?)
+	}
+
+	/// Create a new session for a navigator.
+	pub async fn create_session(
+		&self,
+		session: Session,
+	) -> Result<Session, NavigatorRepositoryError> {
+		self.create_session_tx(&self.pool, session).await
+	}
 }
 
 #[derive(Debug, Error)]
@@ -309,6 +358,9 @@ pub enum NavigatorRepositoryError {
 	#[error("Navigator builder error: {0}")]
 	BuilderError(#[from] NavigatorBuilderError),
 
+	#[error("Session builder error: {0}")]
+	SessionBuilderError(#[from] SessionBuilderError),
+
 	#[error("Navigator not found")]
 	NavigatorNotFound,
 }
@@ -321,6 +373,7 @@ mod tests {
 
 	use super::*;
 	use crate::models::Navigator;
+	use crate::models::session::Session;
 
 	async fn connect_to_test_database() -> Pool<Postgres> {
 		PgPoolOptions::new()
@@ -466,6 +519,51 @@ mod tests {
 			.expect("Failed to attempt authentication");
 
 		assert!(wrong_username.is_none());
+
+		// Cleanup: Delete the test navigator.
+		repo
+			.delete_navigator(navigator.nutty_id())
+			.await
+			.expect("Failed to delete navigator");
+	}
+
+	#[tokio::test]
+	async fn test_create_session() {
+		// Arrange: Create a repository.
+		let pool = connect_to_test_database().await;
+		let repo = NavigatorRepository::new(pool);
+
+		// Arrange: Create a test navigator.
+		let name = "session_test";
+		let password = "test_password";
+		let navigator = Navigator::new(name.to_string(), password).unwrap();
+		let navigator = repo
+			.create_navigator(navigator)
+			.await
+			.expect("Failed to create navigator");
+
+		// Arrange: Create a test session.
+		let user_agent = "test-agent".to_string();
+		let session = Session::new(
+			*navigator.nutty_id(),
+			user_agent.clone(),
+			chrono::Duration::days(30),
+		)
+		.unwrap();
+
+		// Act: Create the session.
+		let created_session = repo
+			.create_session(session.clone())
+			.await
+			.expect("Failed to create session");
+
+		// Assert: The created session matches the original.
+		assert_eq!(*created_session.nutty_id(), *session.nutty_id());
+		assert_eq!(*created_session.navigator_id(), *session.navigator_id());
+		assert_eq!(created_session.user_agent(), session.user_agent());
+		assert_eq!(created_session.expires_at(), session.expires_at());
+		assert_eq!(created_session.created_at(), session.created_at());
+		assert_eq!(created_session.updated_at(), session.updated_at());
 
 		// Cleanup: Delete the test navigator.
 		repo
