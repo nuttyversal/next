@@ -18,6 +18,7 @@ use crate::models::NuttyId;
 pub struct Navigator {
 	nutty_id: NuttyId,
 	name: String,
+	#[serde(skip_serializing)]
 	pass: String,
 	created_at: DateTime<Utc>,
 	updated_at: DateTime<Utc>,

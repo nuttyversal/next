@@ -10,8 +10,10 @@ use crate::models::NuttyId;
 /// Represents an active [Navigator] login session.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Session {
+	#[serde(skip_serializing)]
 	nutty_id: NuttyId,
 	navigator_id: NuttyId,
+	#[serde(skip_serializing)]
 	user_agent: String,
 	expires_at: DateTime<Utc>,
 	created_at: DateTime<Utc>,
