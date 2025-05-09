@@ -94,6 +94,18 @@ impl Session {
 pub enum SessionError {
 	#[error("Invalid timestamp from Nutty ID: {timestamp}")]
 	InvalidTimestamp { timestamp: i64 },
+
+	#[error("Session not found")]
+	SessionNotFound,
+
+	#[error("Session expired")]
+	SessionExpired,
+
+	#[error("Missing cookie")]
+	MissingCookie,
+
+	#[error("Invalid cookie")]
+	InvalidCookie,
 }
 
 /// A builder for creating new sessions.

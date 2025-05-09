@@ -1,4 +1,5 @@
 use crate::models::Navigator;
+use crate::models::NuttyId;
 use crate::models::navigator::NavigatorError;
 use crate::models::session::Session;
 use crate::models::session::SessionError;
@@ -59,6 +60,30 @@ impl NavigatorService {
 			.map_err(NavigatorServiceError::Insert)?;
 
 		Ok((navigator, session))
+	}
+
+	/// Get a navigator by ID.
+	pub async fn get_navigator_by_id(
+		&self,
+		id: &NuttyId,
+	) -> Result<Option<Navigator>, NavigatorServiceError> {
+		self
+			.repository
+			.get_navigator_by_id(id)
+			.await
+			.map_err(NavigatorServiceError::Insert)
+	}
+
+	/// Get a session by ID.
+	pub async fn get_session_by_id(
+		&self,
+		id: &NuttyId,
+	) -> Result<Option<Session>, NavigatorServiceError> {
+		self
+			.repository
+			.get_session_by_id(id)
+			.await
+			.map_err(NavigatorServiceError::Insert)
 	}
 }
 
@@ -179,13 +204,13 @@ mod tests {
 		let repo = NavigatorRepository::new(pool);
 		let service = NavigatorService::new(repo.clone());
 
-		// Register a test navigator
+		// Register a test navigator.
 		let navigator = service
 			.register("login_test".to_string(), "password123".to_string())
 			.await
 			.expect("Failed to register test navigator");
 
-		// Act: Login with correct credentials
+		// Act: Login with correct credentials.
 		let result = service
 			.login(
 				"login_test".to_string(),
@@ -194,14 +219,14 @@ mod tests {
 			)
 			.await;
 
-		// Assert: Verify the login was successful
+		// Assert: Verify the login was successful.
 		assert!(result.is_ok());
 		let (logged_in_navigator, session) = result.unwrap();
 		assert_eq!(logged_in_navigator.nutty_id(), navigator.nutty_id());
 		assert_eq!(session.user_agent(), "test-agent");
 		assert!(!session.is_expired());
 
-		// Cleanup: Delete the test navigator
+		// Cleanup: Delete the test navigator.
 		repo
 			.delete_navigator(navigator.nutty_id())
 			.await
@@ -266,5 +291,114 @@ mod tests {
 			NavigatorServiceError::InvalidCredentials => (),
 			_ => panic!("Expected InvalidCredentials error"),
 		}
+	}
+
+	#[tokio::test]
+	async fn test_get_navigator_by_id() {
+		// Arrange: Create a repository and service.
+		let pool = connect_to_test_database().await;
+		let repo = NavigatorRepository::new(pool);
+		let service = NavigatorService::new(repo.clone());
+
+		// Register a test navigator.
+		let created_navigator = service
+			.register("navigator_test".to_string(), "password123".to_string())
+			.await
+			.expect("Failed to register test navigator");
+
+		// Act: Get the navigator by ID.
+		let result = service
+			.get_navigator_by_id(created_navigator.nutty_id())
+			.await;
+
+		// Assert: Verify the navigator was retrieved successfully.
+		assert!(result.is_ok());
+		let retrieved_navigator = result.unwrap().expect("Navigator not found");
+		assert_eq!(
+			*retrieved_navigator.nutty_id(),
+			*created_navigator.nutty_id()
+		);
+		assert_eq!(retrieved_navigator.name(), created_navigator.name());
+		assert_eq!(retrieved_navigator.pass(), created_navigator.pass());
+		assert_eq!(
+			retrieved_navigator.created_at(),
+			created_navigator.created_at()
+		);
+		assert_eq!(
+			retrieved_navigator.updated_at(),
+			created_navigator.updated_at()
+		);
+
+		// Act: Try to get a non-existent navigator.
+		let non_existent_id = NuttyId::now();
+		let result = service.get_navigator_by_id(&non_existent_id).await;
+
+		// Assert: Verify no navigator was found.
+		assert!(result.is_ok());
+		assert!(result.unwrap().is_none());
+
+		// Cleanup: Delete the test navigator.
+		repo
+			.delete_navigator(created_navigator.nutty_id())
+			.await
+			.expect("Failed to delete test navigator");
+	}
+
+	#[tokio::test]
+	async fn test_get_session_by_id() {
+		// Arrange: Create a repository and service.
+		let pool = connect_to_test_database().await;
+		let repo = NavigatorRepository::new(pool);
+		let service = NavigatorService::new(repo.clone());
+
+		// Register a test navigator.
+		let navigator = service
+			.register("session_test".to_string(), "password123".to_string())
+			.await
+			.expect("Failed to register test navigator");
+
+		// Create a test session.
+		let session = Session::new(
+			*navigator.nutty_id(),
+			"test-agent".to_string(),
+			chrono::Duration::days(1),
+		)
+		.unwrap();
+
+		// Save the session.
+		let created_session = repo
+			.create_session(session)
+			.await
+			.expect("Failed to create session");
+
+		// Act: Get the session by ID.
+		let result = service.get_session_by_id(created_session.nutty_id()).await;
+
+		// Assert: Verify the session was retrieved successfully.
+		assert!(result.is_ok());
+		let retrieved_session = result.unwrap().expect("Session not found");
+		assert_eq!(*retrieved_session.nutty_id(), *created_session.nutty_id());
+		assert_eq!(
+			*retrieved_session.navigator_id(),
+			*created_session.navigator_id()
+		);
+		assert_eq!(retrieved_session.user_agent(), created_session.user_agent());
+		assert_eq!(retrieved_session.expires_at(), created_session.expires_at());
+		assert_eq!(retrieved_session.created_at(), created_session.created_at());
+		assert_eq!(retrieved_session.updated_at(), created_session.updated_at());
+
+		// Act: Try to get a non-existent session.
+		let non_existent_id = NuttyId::now();
+		let result = service.get_session_by_id(&non_existent_id).await;
+
+		// Assert: Verify no session was found.
+		assert!(result.is_ok());
+		assert!(result.unwrap().is_none());
+
+		// Cleanup: Delete the test navigator.
+		repo
+			.delete_navigator(navigator.nutty_id())
+			.await
+			.expect("Failed to delete test navigator");
 	}
 }

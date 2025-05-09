@@ -343,6 +343,52 @@ impl NavigatorRepository {
 	) -> Result<Session, NavigatorRepositoryError> {
 		self.create_session_tx(&self.pool, session).await
 	}
+
+	/// Get a session by ID.
+	pub async fn get_session_by_id_tx<'e, E>(
+		&self,
+		executor: E,
+		id: &NuttyId,
+	) -> Result<Option<Session>, NavigatorRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
+		// Find the session.
+		let record = sqlx::query!(
+			r#"
+				SELECT id, navigator_id, user_agent, expires_at, created_at, updated_at
+				FROM auth.sessions
+				WHERE id = $1
+			"#,
+			id.uuid(),
+		)
+		.fetch_optional(executor)
+		.await?;
+
+		// Return the session if found.
+		match record {
+			Some(record) => Ok(Some(
+				Session::builder()
+					.nutty_id(NuttyId::new(record.id))
+					.navigator_id(NuttyId::new(record.navigator_id))
+					.user_agent(record.user_agent)
+					.expires_at(record.expires_at)
+					.created_at(record.created_at)
+					.updated_at(record.updated_at)
+					.try_build()
+					.map_err(NavigatorRepositoryError::SessionBuilderError)?,
+			)),
+			None => Ok(None),
+		}
+	}
+
+	/// Get a session by ID.
+	pub async fn get_session_by_id(
+		&self,
+		id: &NuttyId,
+	) -> Result<Option<Session>, NavigatorRepositoryError> {
+		self.get_session_by_id_tx(&self.pool, id).await
+	}
 }
 
 #[derive(Debug, Error)]
@@ -562,6 +608,72 @@ mod tests {
 		assert_eq!(created_session.expires_at(), session.expires_at());
 		assert_eq!(created_session.created_at(), session.created_at());
 		assert_eq!(created_session.updated_at(), session.updated_at());
+
+		// Cleanup: Delete the test navigator.
+		repo
+			.delete_navigator(navigator.nutty_id())
+			.await
+			.expect("Failed to delete navigator");
+	}
+
+	#[tokio::test]
+	async fn test_get_session_by_id() {
+		// Arrange: Create a repository.
+		let pool = connect_to_test_database().await;
+		let repo = NavigatorRepository::new(pool);
+
+		// Arrange: Create a test navigator.
+		let name = "session_test";
+		let password = "test_password";
+		let navigator = Navigator::new(name.to_string(), password).unwrap();
+
+		let navigator = repo
+			.create_navigator(navigator)
+			.await
+			.expect("Failed to create navigator");
+
+		// Arrange: Create a test session.
+		let user_agent = "test-agent".to_string();
+		let session = Session::new(
+			*navigator.nutty_id(),
+			user_agent.clone(),
+			chrono::Duration::days(30),
+		)
+		.unwrap();
+
+		// Act: Create the session.
+		let created_session = repo
+			.create_session(session.clone())
+			.await
+			.expect("Failed to create session");
+
+		// Act: Get the session by ID.
+		let retrieved_session = repo
+			.get_session_by_id(created_session.nutty_id())
+			.await
+			.expect("Failed to get session by ID")
+			.expect("Session not found");
+
+		// Assert: The retrieved session matches the original.
+		assert_eq!(*retrieved_session.nutty_id(), *created_session.nutty_id());
+		assert_eq!(
+			*retrieved_session.navigator_id(),
+			*created_session.navigator_id()
+		);
+		assert_eq!(retrieved_session.user_agent(), created_session.user_agent());
+		assert_eq!(retrieved_session.expires_at(), created_session.expires_at());
+		assert_eq!(retrieved_session.created_at(), created_session.created_at());
+		assert_eq!(retrieved_session.updated_at(), created_session.updated_at());
+
+		// Act: Try to get a non-existent session.
+		let non_existent_id = NuttyId::now();
+		let not_found_session = repo
+			.get_session_by_id(&non_existent_id)
+			.await
+			.expect("Failed to check for non-existent session");
+
+		// Assert: No session was found.
+		assert!(not_found_session.is_none());
 
 		// Cleanup: Delete the test navigator.
 		repo
