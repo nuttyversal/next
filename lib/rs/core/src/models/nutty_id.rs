@@ -1,4 +1,6 @@
 use std::cmp::Ordering;
+use std::fmt::Display;
+use std::fmt::Formatter;
 
 use proptest::prelude::Strategy;
 use serde::Serialize;
@@ -58,6 +60,15 @@ impl NuttyId {
 	/// Detach the NID from the UUID.
 	pub fn dissociate(&self) -> DissociatedNuttyId {
 		DissociatedNuttyId::new(&self.nid()).expect("the impossible")
+	}
+}
+
+impl Display for NuttyId {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		let uuid = self.uuid.as_u128();
+		let uuid = encode_base_58(uuid, 22);
+		let nid = self.nid();
+		write!(f, "{uuid}:{nid}")
 	}
 }
 
