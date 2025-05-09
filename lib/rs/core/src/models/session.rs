@@ -108,6 +108,9 @@ pub enum SessionError {
 
 	#[error("Invalid cookie")]
 	InvalidCookie,
+
+	#[error("User agent mismatch")]
+	UserAgentMismatch,
 }
 
 /// A builder for creating new sessions.

@@ -102,6 +102,26 @@ impl FromRequestParts<Arc<AppState>> for Session {
 			));
 		}
 
+		// Extract the User-Agent header from the request.
+		let request_user_agent = parts
+			.headers
+			.get("user-agent")
+			.and_then(|v| v.to_str().ok())
+			.unwrap_or("");
+
+		// Compare User-Agent with the one stored in the session.
+		if request_user_agent != session.user_agent() {
+			let error = Error::from_error(&SessionError::UserAgentMismatch)
+				.with_summary("Detected possible session hijacking attempt.");
+
+			return Err((
+				StatusCode::UNAUTHORIZED,
+				Json(Response::Error {
+					errors: vec![error],
+				}),
+			));
+		}
+
 		// Get the navigator associated with the session.
 		let navigator = state
 			.navigator_service
@@ -197,10 +217,12 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		let cookie = format!("session_id={}", session.nutty_id());
 		headers.insert("cookie", HeaderValue::from_str(&cookie).unwrap());
+		headers.insert("user-agent", HeaderValue::from_str("test-agent").unwrap());
 
 		let request = Request::builder()
 			.uri("/test")
 			.header("cookie", cookie)
+			.header("user-agent", "test-agent")
 			.body(Body::empty())
 			.unwrap();
 
@@ -216,6 +238,122 @@ mod tests {
 		assert_eq!(*extractor.session.nutty_id(), *session.nutty_id());
 		assert_eq!(*extractor.navigator.nutty_id(), *navigator.nutty_id());
 		assert_eq!(extractor.navigator.name(), "test_extractor");
+
+		// Cleanup.
+		navigator_repository
+			.delete_navigator(navigator.nutty_id())
+			.await
+			.expect("Failed to delete test navigator");
+	}
+
+	#[tokio::test]
+	async fn test_session_extractor_user_agent_validation() {
+		// Arrange: Set up the test dependencies.
+		let pool = connect_to_test_database().await;
+		let navigator_repository = NavigatorRepository::new(pool.clone());
+		let content_repository = ContentRepository::new(pool.clone());
+		let navigator_service = NavigatorService::new(navigator_repository.clone());
+		let content_service = ContentService::new(content_repository.clone());
+
+		let state = Arc::new(AppState {
+			navigator_service,
+			content_service,
+		});
+
+		// Create a test navigator.
+		let navigator = state
+			.navigator_service
+			.register("test_user_agent".to_string(), "password123".to_string())
+			.await
+			.expect("Failed to register test navigator");
+
+		// Create a test session with a specific User-Agent.
+		let specific_user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X)";
+		let session = SessionModel::new(
+			*navigator.nutty_id(),
+			specific_user_agent.to_string(),
+			chrono::Duration::days(1),
+		)
+		.unwrap();
+
+		// Save the session.
+		let session = navigator_repository
+			.create_session(session)
+			.await
+			.expect("Failed to create session");
+
+		{
+			// Create request with matching User-Agent.
+			let mut headers = HeaderMap::new();
+			let cookie = format!("session_id={}", session.nutty_id());
+			headers.insert("cookie", HeaderValue::from_str(&cookie).unwrap());
+			headers.insert(
+				"user-agent",
+				HeaderValue::from_str(specific_user_agent).unwrap(),
+			);
+
+			let request = Request::builder()
+				.uri("/test")
+				.header("cookie", cookie)
+				.header("user-agent", specific_user_agent)
+				.body(Body::empty())
+				.unwrap();
+
+			let (mut parts, _) = request.into_parts();
+			parts.headers = headers;
+
+			// Act: Extract the session.
+			let result = Session::from_request_parts(&mut parts, &state).await;
+
+			// Assert: Session is successfully extracted when User-Agent matches.
+			assert!(
+				result.is_ok(),
+				"Session extraction should succeed with matching User-Agent"
+			);
+			let extractor = result.unwrap();
+			assert_eq!(*extractor.session.nutty_id(), *session.nutty_id());
+			assert_eq!(extractor.session.user_agent(), specific_user_agent);
+		}
+
+		{
+			// Create request with different User-Agent.
+			let mut headers = HeaderMap::new();
+			let cookie = format!("session_id={}", session.nutty_id());
+			headers.insert("cookie", HeaderValue::from_str(&cookie).unwrap());
+			headers.insert(
+				"user-agent",
+				HeaderValue::from_str("Different/User-Agent").unwrap(),
+			);
+
+			let request = Request::builder()
+				.uri("/test")
+				.header("cookie", cookie)
+				.header("user-agent", "Different/User-Agent")
+				.body(Body::empty())
+				.unwrap();
+
+			let (mut parts, _) = request.into_parts();
+			parts.headers = headers;
+
+			// Act: Extract the session.
+			let result = Session::from_request_parts(&mut parts, &state).await;
+
+			// Assert: Session extraction fails with User-Agent mismatch.
+			assert!(
+				result.is_err(),
+				"Session extraction should fail with mismatched User-Agent"
+			);
+
+			if let Err((status, response)) = result {
+				assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+				if let Response::Error { errors } = response.0 {
+					assert!(!errors.is_empty());
+				} else {
+					panic!("Expected Error response");
+				}
+			}
+		}
 
 		// Cleanup.
 		navigator_repository
