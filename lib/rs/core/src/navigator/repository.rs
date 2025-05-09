@@ -308,7 +308,6 @@ impl NavigatorRepository {
 	where
 		E: Executor<'e, Database = Postgres>,
 	{
-		// Insert the session record.
 		let record = sqlx::query!(
 			r#"
 				INSERT INTO auth.sessions (id, nutty_id, navigator_id, user_agent, expires_at, created_at, updated_at)
@@ -326,8 +325,7 @@ impl NavigatorRepository {
 		.fetch_one(executor)
 		.await?;
 
-		// Reconstruct the session.
-		Ok(Session::builder()
+		Session::builder()
 			.nutty_id(NuttyId::new(record.id))
 			.navigator_id(NuttyId::new(record.navigator_id))
 			.user_agent(record.user_agent)
@@ -335,7 +333,7 @@ impl NavigatorRepository {
 			.created_at(record.created_at)
 			.updated_at(record.updated_at)
 			.try_build()
-			.map_err(NavigatorRepositoryError::SessionBuilderError)?)
+			.map_err(NavigatorRepositoryError::SessionBuilderError)
 	}
 
 	/// Create a new session for a navigator.
