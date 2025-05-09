@@ -3,10 +3,18 @@ use std::sync::Arc;
 use axum::Json;
 use axum::Router;
 use axum::extract::State;
+use axum::http::HeaderValue;
 use axum::http::StatusCode;
+use axum::http::header::SET_COOKIE;
+use axum::response::IntoResponse;
 use axum::routing::post;
+use axum_extra::TypedHeader;
+use axum_extra::headers::UserAgent;
+use cookie::Cookie;
+use cookie::SameSite;
 
 use crate::models::Navigator;
+use crate::models::session::Session;
 use crate::navigator::service::NavigatorServiceError;
 use crate::utilities::api::response::Error;
 use crate::utilities::api::response::Response;
@@ -16,11 +24,12 @@ use crate::utilities::api::state::AppState;
 pub fn router(app_state: Arc<AppState>) -> Router {
 	Router::new()
 		.route("/navigator", post(register_handler))
+		.route("/navigator/login", post(login_handler))
 		.with_state(app_state)
 }
 
 /// Request payload for registering a new navigator.
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct RegisterRequest {
 	name: String,
 	pass: String,
@@ -45,11 +54,75 @@ async fn register_handler(
 
 		Err(error) => {
 			let summary = "Failed to register navigator.";
-			let error = NavigatorApiError::Register(error);
-			let error = Error::from_error(&error).with_summary(summary);
+			let api_error = NavigatorApiError::Register(error);
+			let error_obj = Error::from_error(&api_error);
+			let error = error_obj.with_summary(summary);
 
 			(
 				StatusCode::INTERNAL_SERVER_ERROR,
+				Json(Response::Error {
+					errors: vec![error],
+				}),
+			)
+		}
+	}
+}
+
+/// Request payload for logging in a navigator.
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct LoginRequest {
+	name: String,
+	pass: String,
+}
+
+/// Response payload for a successful login.
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct LoginResponse {
+	navigator: Navigator,
+	session: Session,
+}
+
+/// An API handler for logging in a [Navigator].
+#[axum::debug_handler]
+async fn login_handler(
+	State(state): State<Arc<AppState>>,
+	TypedHeader(user_agent): TypedHeader<UserAgent>,
+	Json(payload): Json<LoginRequest>,
+) -> impl IntoResponse {
+	match state
+		.navigator_service
+		.login(payload.name, payload.pass, user_agent.to_string())
+		.await
+	{
+		Ok((navigator, session)) => {
+			let cookie = Cookie::build(("session_id", session.nutty_id().to_string()))
+				.same_site(SameSite::Strict)
+				.secure(true)
+				.http_only(true)
+				.path("/")
+				.max_age(cookie::time::Duration::days(1));
+
+			let cookie_header =
+				HeaderValue::from_str(&cookie.to_string()).expect("Failed to create cookie header");
+
+			(
+				StatusCode::OK,
+				[(SET_COOKIE, cookie_header)],
+				Json(Response::Single {
+					data: Some(LoginResponse { navigator, session }),
+				}),
+			)
+		}
+
+		Err(error) => {
+			let summary = "Failed to login.";
+			let api_error = NavigatorApiError::Login(error);
+			let error_obj = Error::from_error(&api_error);
+			let error = error_obj.with_summary(summary);
+
+			(
+				StatusCode::UNAUTHORIZED,
+				[(SET_COOKIE, HeaderValue::from_static(""))],
 				Json(Response::Error {
 					errors: vec![error],
 				}),
@@ -62,4 +135,7 @@ async fn register_handler(
 pub enum NavigatorApiError {
 	#[error("Failed to register navigator: {0}")]
 	Register(#[from] NavigatorServiceError),
+
+	#[error("Failed to login: {0}")]
+	Login(NavigatorServiceError),
 }
