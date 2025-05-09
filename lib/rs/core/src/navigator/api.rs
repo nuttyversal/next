@@ -27,6 +27,7 @@ pub fn router(app_state: Arc<AppState>) -> Router {
 	Router::new()
 		.route("/navigator", post(register_handler))
 		.route("/navigator/login", post(login_handler))
+		.route("/navigator/logout", post(logout_handler))
 		.route("/navigator/me", get(me_handler))
 		.with_state(app_state)
 }
@@ -134,6 +135,47 @@ async fn login_handler(
 	}
 }
 
+/// An API handler for logging out a [Navigator].
+async fn logout_handler(
+	State(state): State<Arc<AppState>>,
+	Session { session, .. }: Session,
+) -> impl IntoResponse {
+	match state.navigator_service.logout(session.nutty_id()).await {
+		Ok(_) => {
+			let expired_cookie = Cookie::build(("session_id", ""))
+				.same_site(SameSite::Strict)
+				.secure(true)
+				.http_only(true)
+				.path("/")
+				.max_age(cookie::time::Duration::seconds(0));
+
+			let cookie_header = HeaderValue::from_str(&expired_cookie.to_string())
+				.expect("Failed to create cookie header");
+
+			(
+				StatusCode::OK,
+				[(SET_COOKIE, cookie_header)],
+				Json(Response::<()>::Single { data: None }),
+			)
+		}
+
+		Err(error) => {
+			let summary = "Failed to logout.";
+			let api_error = NavigatorApiError::Logout(error);
+			let error_obj = Error::from_error(&api_error);
+			let error = error_obj.with_summary(summary);
+
+			(
+				StatusCode::INTERNAL_SERVER_ERROR,
+				[(SET_COOKIE, HeaderValue::from_static(""))],
+				Json(Response::Error {
+					errors: vec![error],
+				}),
+			)
+		}
+	}
+}
+
 /// Response payload for the current navigator's profile.
 #[derive(serde::Serialize)]
 pub struct MeResponse {
@@ -161,4 +203,7 @@ pub enum NavigatorApiError {
 
 	#[error("Failed to login: {0}")]
 	Login(NavigatorServiceError),
+
+	#[error("Failed to logout: {0}")]
+	Logout(NavigatorServiceError),
 }

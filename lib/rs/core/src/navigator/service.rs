@@ -62,6 +62,15 @@ impl NavigatorService {
 		Ok((navigator, session))
 	}
 
+	/// Logout a navigator by deleting their session.
+	pub async fn logout(&self, session_id: &NuttyId) -> Result<(), NavigatorServiceError> {
+		self
+			.repository
+			.delete_session(session_id)
+			.await
+			.map_err(NavigatorServiceError::DeleteSession)
+	}
+
 	/// Get a navigator by ID.
 	pub async fn get_navigator_by_id(
 		&self,
@@ -90,16 +99,19 @@ impl NavigatorService {
 #[derive(Debug, thiserror::Error)]
 pub enum NavigatorServiceError {
 	#[error("Failed to create navigator: {0}")]
-	Create(#[from] NavigatorError),
+	Create(#[source] NavigatorError),
 
 	#[error("Failed to create navigator: {0}")]
-	Insert(#[from] NavigatorRepositoryError),
+	Insert(#[source] NavigatorRepositoryError),
 
 	#[error("Invalid credentials")]
 	InvalidCredentials,
 
 	#[error("Failed to create session: {0}")]
-	CreateSession(#[from] SessionError),
+	CreateSession(#[source] SessionError),
+
+	#[error("Failed to delete session: {0}")]
+	DeleteSession(#[source] NavigatorRepositoryError),
 }
 
 #[cfg(test)]
@@ -291,6 +303,61 @@ mod tests {
 			NavigatorServiceError::InvalidCredentials => (),
 			_ => panic!("Expected InvalidCredentials error"),
 		}
+	}
+
+	#[tokio::test]
+	async fn test_logout() {
+		// Arrange: Create a repository and service.
+		let pool = connect_to_test_database().await;
+		let repo = NavigatorRepository::new(pool);
+		let service = NavigatorService::new(repo.clone());
+
+		// Arrange: Create a test navigator.
+		let name = "logout_test";
+		let password = "test_password";
+		let navigator = Navigator::new(name.to_string(), password).unwrap();
+		let navigator = repo
+			.create_navigator(navigator)
+			.await
+			.expect("Failed to create navigator");
+
+		// Arrange: Create a test session.
+		let user_agent = "test-agent".to_string();
+		let session = Session::new(
+			*navigator.nutty_id(),
+			user_agent.clone(),
+			chrono::Duration::days(30),
+		)
+		.unwrap();
+
+		// Arrange: Save the session.
+		let saved_session = repo
+			.create_session(session.clone())
+			.await
+			.expect("Failed to create session");
+
+		// Act: Logout by deleting the session.
+		service
+			.logout(saved_session.nutty_id())
+			.await
+			.expect("Failed to logout");
+
+		// Assert: The session no longer exists.
+		let session_check = repo
+			.get_session_by_id(saved_session.nutty_id())
+			.await
+			.expect("Failed to check for deleted session");
+
+		assert!(
+			session_check.is_none(),
+			"Session was not deleted during logout"
+		);
+
+		// Cleanup: Delete the test navigator.
+		repo
+			.delete_navigator(navigator.nutty_id())
+			.await
+			.expect("Failed to delete navigator");
 	}
 
 	#[tokio::test]

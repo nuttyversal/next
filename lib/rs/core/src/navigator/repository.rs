@@ -389,6 +389,33 @@ impl NavigatorRepository {
 	) -> Result<Option<Session>, NavigatorRepositoryError> {
 		self.get_session_by_id_tx(&self.pool, id).await
 	}
+
+	/// Delete a session by ID.
+	pub async fn delete_session_tx<'e, E>(
+		&self,
+		executor: E,
+		id: &NuttyId,
+	) -> Result<(), NavigatorRepositoryError>
+	where
+		E: Executor<'e, Database = Postgres>,
+	{
+		sqlx::query!(
+			r#"
+				DELETE FROM auth.sessions
+				WHERE id = $1
+			"#,
+			id.uuid(),
+		)
+		.execute(executor)
+		.await?;
+
+		Ok(())
+	}
+
+	/// Delete a session by ID.
+	pub async fn delete_session(&self, id: &NuttyId) -> Result<(), NavigatorRepositoryError> {
+		self.delete_session_tx(&self.pool, id).await
+	}
 }
 
 #[derive(Debug, Error)]
@@ -674,6 +701,57 @@ mod tests {
 
 		// Assert: No session was found.
 		assert!(not_found_session.is_none());
+
+		// Cleanup: Delete the test navigator.
+		repo
+			.delete_navigator(navigator.nutty_id())
+			.await
+			.expect("Failed to delete navigator");
+	}
+
+	#[tokio::test]
+	async fn test_delete_session() {
+		// Arrange: Create a repository.
+		let pool = connect_to_test_database().await;
+		let repo = NavigatorRepository::new(pool);
+
+		// Arrange: Create a test navigator.
+		let name = "delete_test";
+		let password = "test_password";
+		let navigator = Navigator::new(name.to_string(), password).unwrap();
+		let navigator = repo
+			.create_navigator(navigator)
+			.await
+			.expect("Failed to create navigator");
+
+		// Arrange: Create a test session.
+		let user_agent = "test-agent".to_string();
+		let session = Session::new(
+			*navigator.nutty_id(),
+			user_agent.clone(),
+			chrono::Duration::days(30),
+		)
+		.unwrap();
+
+		// Act: Create the session.
+		let created_session = repo
+			.create_session(session.clone())
+			.await
+			.expect("Failed to create session");
+
+		// Act: Delete the session.
+		repo
+			.delete_session(created_session.nutty_id())
+			.await
+			.expect("Failed to delete session");
+
+		// Assert: The session no longer exists.
+		let deleted_check = repo
+			.get_session_by_id(created_session.nutty_id())
+			.await
+			.expect("Failed to check for deleted session");
+
+		assert!(deleted_check.is_none(), "Session was not deleted");
 
 		// Cleanup: Delete the test navigator.
 		repo
