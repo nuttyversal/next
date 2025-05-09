@@ -2,7 +2,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 /// The structure of an API response.
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Response<T> {
 	/// A single resource object.
@@ -35,7 +35,7 @@ impl<T> Response<T> {
 }
 
 /// An error object.
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Error {
 	/// An application-specific error code (i.e., the error variant name).
 	#[serde(skip_serializing_if = "Option::is_none")]

@@ -2,7 +2,6 @@ use axum::Json;
 use axum::extract::FromRequestParts;
 use axum::http::StatusCode;
 use axum::http::request::Parts;
-use uuid::Uuid;
 
 use crate::models::NuttyId;
 use crate::models::navigator::Navigator;
@@ -41,7 +40,7 @@ impl FromRequestParts<AppState> for SessionExtractor {
 			.and_then(|v| v.strip_prefix("session_id="))
 			.ok_or_else(|| {
 				let error = Error::from_error(&SessionError::MissingCookie)
-					.with_summary("No session cookie found");
+					.with_summary("No session cookie found.");
 				(
 					StatusCode::UNAUTHORIZED,
 					Json(Response::Error {
@@ -50,25 +49,26 @@ impl FromRequestParts<AppState> for SessionExtractor {
 				)
 			})?;
 
-		// Parse the session ID.
-		let session_id = Uuid::parse_str(session_id).map_err(|_| {
-			let error =
-				Error::from_error(&SessionError::InvalidCookie).with_summary("Invalid session cookie");
-			(
-				StatusCode::UNAUTHORIZED,
-				Json(Response::Error {
-					errors: vec![error],
-				}),
-			)
-		})?;
+		// Parse the session ID as a NuttyId.
+		let nutty_id =
+			serde_json::from_str::<NuttyId>(&format!("\"{session_id}\"")).map_err(|_| {
+				let error = Error::from_error(&SessionError::InvalidCookie)
+					.with_summary("Invalid session cookie.");
+				(
+					StatusCode::UNAUTHORIZED,
+					Json(Response::Error {
+						errors: vec![error],
+					}),
+				)
+			})?;
 
 		// Get the session from the database.
 		let session = state
 			.navigator_service
-			.get_session_by_id(&NuttyId::new(session_id))
+			.get_session_by_id(&nutty_id)
 			.await
 			.map_err(|e| {
-				let error = Error::from_error(&e).with_summary("Failed to retrieve session");
+				let error = Error::from_error(&e).with_summary("Failed to retrieve session.");
 				(
 					StatusCode::INTERNAL_SERVER_ERROR,
 					Json(Response::Error {
@@ -78,7 +78,7 @@ impl FromRequestParts<AppState> for SessionExtractor {
 			})?
 			.ok_or_else(|| {
 				let error =
-					Error::from_error(&SessionError::SessionNotFound).with_summary("Session not found");
+					Error::from_error(&SessionError::SessionNotFound).with_summary("Session not found.");
 				(
 					StatusCode::UNAUTHORIZED,
 					Json(Response::Error {
@@ -90,7 +90,7 @@ impl FromRequestParts<AppState> for SessionExtractor {
 		// Check if the session is expired.
 		if session.is_expired() {
 			let error =
-				Error::from_error(&SessionError::SessionExpired).with_summary("Session has expired");
+				Error::from_error(&SessionError::SessionExpired).with_summary("Session has expired.");
 
 			return Err((
 				StatusCode::UNAUTHORIZED,
@@ -106,7 +106,7 @@ impl FromRequestParts<AppState> for SessionExtractor {
 			.get_navigator_by_id(session.navigator_id())
 			.await
 			.map_err(|e| {
-				let error = Error::from_error(&e).with_summary("Failed to retrieve navigator");
+				let error = Error::from_error(&e).with_summary("Failed to retrieve navigator.");
 				(
 					StatusCode::INTERNAL_SERVER_ERROR,
 					Json(Response::Error {
@@ -116,7 +116,7 @@ impl FromRequestParts<AppState> for SessionExtractor {
 			})?
 			.ok_or_else(|| {
 				let error = Error::from_error(&SessionError::SessionNotFound)
-					.with_summary("Navigator not found");
+					.with_summary("Navigator not found.");
 				(
 					StatusCode::UNAUTHORIZED,
 					Json(Response::Error {
@@ -126,5 +126,99 @@ impl FromRequestParts<AppState> for SessionExtractor {
 			})?;
 
 		Ok(SessionExtractor { session, navigator })
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use std::sync::Arc;
+
+	use axum::body::Body;
+	use axum::http::HeaderMap;
+	use axum::http::HeaderValue;
+	use axum::http::Request;
+	use sqlx::Pool;
+	use sqlx::Postgres;
+	use sqlx::postgres::PgPoolOptions;
+
+	use super::*;
+	use crate::content::repository::ContentRepository;
+	use crate::content::service::ContentService;
+	use crate::navigator::repository::NavigatorRepository;
+	use crate::navigator::service::NavigatorService;
+	use crate::utilities::api::state::AppState;
+
+	async fn connect_to_test_database() -> Pool<Postgres> {
+		PgPoolOptions::new()
+			.max_connections(5)
+			.connect("postgres://nutty@localhost:5432/nuttyverse")
+			.await
+			.expect("Failed to connect to test database")
+	}
+
+	#[tokio::test]
+	async fn test_session_extractor_from_request_parts() {
+		// Arrange: Set up the test dependencies.
+		let pool = connect_to_test_database().await;
+		let navigator_repository = NavigatorRepository::new(pool.clone());
+		let content_repository = ContentRepository::new(pool.clone());
+		let navigator_service = NavigatorService::new(navigator_repository.clone());
+		let content_service = ContentService::new(content_repository.clone());
+
+		let state = Arc::new(AppState {
+			navigator_service,
+			content_service,
+		});
+
+		// Create a test navigator.
+		let navigator = state
+			.navigator_service
+			.register("test_extractor".to_string(), "password123".to_string())
+			.await
+			.expect("Failed to register test navigator");
+
+		// Create a test session.
+		let session = Session::new(
+			*navigator.nutty_id(),
+			"test-agent".to_string(),
+			chrono::Duration::days(1),
+		)
+		.unwrap();
+
+		// Save the session.
+		let session = navigator_repository
+			.create_session(session)
+			.await
+			.expect("Failed to create session");
+
+		// Create request parts with the session cookie.
+		let mut headers = HeaderMap::new();
+		let cookie = format!("session_id={}", session.nutty_id());
+		headers.insert("cookie", HeaderValue::from_str(&cookie).unwrap());
+
+		let request = Request::builder()
+			.uri("/test")
+			.header("cookie", cookie)
+			.body(Body::empty())
+			.unwrap();
+
+		let (mut parts, _) = request.into_parts();
+		parts.headers = headers;
+		parts.extensions.insert(state.clone());
+
+		// Act: Extract the session.
+		let result = SessionExtractor::from_request_parts(&mut parts, &state).await;
+
+		// Assert: Verify successful extraction.
+		let extractor = result.unwrap();
+		assert_eq!(*extractor.session.nutty_id(), *session.nutty_id());
+		assert_eq!(*extractor.navigator.nutty_id(), *navigator.nutty_id());
+		assert_eq!(extractor.navigator.name(), "test_extractor");
+
+		// Cleanup.
+		navigator_repository
+			.delete_navigator(navigator.nutty_id())
+			.await
+			.expect("Failed to delete test navigator");
 	}
 }
