@@ -7,6 +7,7 @@ use axum::http::HeaderValue;
 use axum::http::StatusCode;
 use axum::http::header::SET_COOKIE;
 use axum::response::IntoResponse;
+use axum::routing::get;
 use axum::routing::post;
 use axum_extra::TypedHeader;
 use axum_extra::headers::UserAgent;
@@ -14,10 +15,11 @@ use cookie::Cookie;
 use cookie::SameSite;
 
 use crate::models::Navigator;
-use crate::models::session::Session;
+use crate::models::session::Session as SessionModel;
 use crate::navigator::service::NavigatorServiceError;
 use crate::utilities::api::response::Error;
 use crate::utilities::api::response::Response;
+use crate::utilities::api::session::Session;
 use crate::utilities::api::state::AppState;
 
 /// The router for navigator API endpoints.
@@ -25,6 +27,7 @@ pub fn router(app_state: Arc<AppState>) -> Router {
 	Router::new()
 		.route("/navigator", post(register_handler))
 		.route("/navigator/login", post(login_handler))
+		.route("/navigator/me", get(me_handler))
 		.with_state(app_state)
 }
 
@@ -69,7 +72,7 @@ async fn register_handler(
 }
 
 /// Request payload for logging in a navigator.
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct LoginRequest {
 	name: String,
 	pass: String,
@@ -79,7 +82,7 @@ pub struct LoginRequest {
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct LoginResponse {
 	navigator: Navigator,
-	session: Session,
+	session: SessionModel,
 }
 
 /// An API handler for logging in a [Navigator].
@@ -129,6 +132,26 @@ async fn login_handler(
 			)
 		}
 	}
+}
+
+/// Response payload for the current navigator's profile.
+#[derive(serde::Serialize)]
+pub struct MeResponse {
+	navigator: Navigator,
+}
+
+/// An API handler for getting the current navigator's profile.
+async fn me_handler(
+	State(_state): State<Arc<AppState>>,
+	Session { navigator, .. }: Session,
+) -> Json<Response<MeResponse>> {
+	// The Session extractor ensures this endpoint is only accessible
+	// to authenticated users. If the session is invalid or expired,
+	// the request will be rejected before reaching this handler.
+
+	Json(Response::Single {
+		data: Some(MeResponse { navigator }),
+	})
 }
 
 #[derive(Debug, thiserror::Error)]

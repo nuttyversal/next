@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::Json;
 use axum::extract::FromRequestParts;
 use axum::http::StatusCode;
@@ -5,24 +7,24 @@ use axum::http::request::Parts;
 
 use crate::models::NuttyId;
 use crate::models::navigator::Navigator;
-use crate::models::session::Session;
+use crate::models::session::Session as SessionModel;
 use crate::models::session::SessionError;
 use crate::utilities::api::response::Error;
 use crate::utilities::api::response::Response;
 use crate::utilities::api::state::AppState;
 
 #[derive(Debug, Clone)]
-pub struct SessionExtractor {
-	pub session: Session,
+pub struct Session {
+	pub session: SessionModel,
 	pub navigator: Navigator,
 }
 
-impl FromRequestParts<AppState> for SessionExtractor {
+impl FromRequestParts<Arc<AppState>> for Session {
 	type Rejection = (StatusCode, Json<Response<()>>);
 
 	async fn from_request_parts(
 		parts: &mut Parts,
-		state: &AppState,
+		state: &Arc<AppState>,
 	) -> Result<Self, Self::Rejection> {
 		// Get the session cookie.
 		let cookies = parts
@@ -125,7 +127,7 @@ impl FromRequestParts<AppState> for SessionExtractor {
 				)
 			})?;
 
-		Ok(SessionExtractor { session, navigator })
+		Ok(Session { session, navigator })
 	}
 }
 
@@ -178,7 +180,7 @@ mod tests {
 			.expect("Failed to register test navigator");
 
 		// Create a test session.
-		let session = Session::new(
+		let session = SessionModel::new(
 			*navigator.nutty_id(),
 			"test-agent".to_string(),
 			chrono::Duration::days(1),
@@ -207,7 +209,7 @@ mod tests {
 		parts.extensions.insert(state.clone());
 
 		// Act: Extract the session.
-		let result = SessionExtractor::from_request_parts(&mut parts, &state).await;
+		let result = Session::from_request_parts(&mut parts, &state).await;
 
 		// Assert: Verify successful extraction.
 		let extractor = result.unwrap();
