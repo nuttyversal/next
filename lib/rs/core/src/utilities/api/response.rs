@@ -81,9 +81,14 @@ impl Error {
 			if let Some(source_err) = err.source() {
 				// Since we lose concrete type information on a `&dyn Error`,
 				// we use the {:?} representation to identify the error type.
-				// E.g., QueryError { source: RowNotFound } → QueryError.
+				// At best, this will yield the error variant name.
+				//
+				// In the future, when `std::error::Report` is stabilized,
+				// we might be able to parse the enum name from the report.
+				//
+				// See https://doc.rust-lang.org/std/error/struct.Report.html.
 				let type_name = format!("{source_err:?}")
-					.split(' ')
+					.split("(")
 					.next()
 					.unwrap_or("UnknownError")
 					.to_string();
