@@ -88,7 +88,7 @@ impl Error {
 				//
 				// See https://doc.rust-lang.org/std/error/struct.Report.html.
 				let type_name = format!("{source_err:?}")
-					.split(|c| c == '(' || c == ' ')
+					.split(['(', ' '])
 					.next()
 					.unwrap_or("UnknownError")
 					.to_string();
