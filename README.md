@@ -10,6 +10,8 @@ point. Emerging from this singularity will bloom a new digital universe! 😀
 
 ```
 nuttyverse
+├── api - Backend API server
+├── app - Frontend application
 ├── ci - Continuous integration & deployment
 ├── dev - Development tools & utilities
 ├── lab - Experimental & unpolished projects
