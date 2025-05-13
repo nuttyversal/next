@@ -1,6 +1,7 @@
 {
 	"compilerOptions": {
 		"strict": true,
+		"baseUrl": "src",
 		"target": "esnext",
 		"module": "esnext",
 		"moduleResolution": "nodenext",
@@ -16,6 +17,9 @@
 		"types": [
 			"vite/client"
 		],
+		"paths": {
+			"~/*": ["*"]
+		},
 		"plugins": [
 			{
 				"name": "@effect/language-service",
