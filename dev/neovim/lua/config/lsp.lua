@@ -183,3 +183,43 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 		})
 	end,
 })
+
+vim.api.nvim_create_autocmd({ "FileType" }, {
+	desc = "Start the TypeScript language server when editing TypeScript files",
+	group = vim.api.nvim_create_augroup("StartTypeScriptLanguageServer", { clear = true }),
+	pattern = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
+
+	callback = function()
+		vim.lsp.start({
+			name = "typescript-language-server",
+			cmd = { "typescript-language-server", "--stdio" },
+			root_dir = infer_project_root_directory({ "tsconfig.json", "package.json" }),
+
+			settings = {
+				typescript = {
+					inlayHints = {
+						includeInlayParameterNameHints = "all",
+						includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+						includeInlayFunctionParameterTypeHints = true,
+						includeInlayVariableTypeHints = true,
+						includeInlayPropertyDeclarationTypeHints = true,
+						includeInlayFunctionLikeReturnTypeHints = true,
+						includeInlayEnumMemberValueHints = true,
+					},
+				},
+
+				javascript = {
+					inlayHints = {
+						includeInlayParameterNameHints = "all",
+						includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+						includeInlayFunctionParameterTypeHints = true,
+						includeInlayVariableTypeHints = true,
+						includeInlayPropertyDeclarationTypeHints = true,
+						includeInlayFunctionLikeReturnTypeHints = true,
+						includeInlayEnumMemberValueHints = true,
+					},
+				},
+			},
+		})
+	end,
+})
