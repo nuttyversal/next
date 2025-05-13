@@ -1,7 +1,7 @@
-import { defineConfig } from "vite";
-import { visualizer } from "rollup-plugin-visualizer";
-import solidPlugin from "vite-plugin-solid";
 import tailwindcss from "@tailwindcss/vite";
+import { visualizer } from "rollup-plugin-visualizer";
+import { defineConfig } from "vite";
+import solidPlugin from "vite-plugin-solid";
 
 export default defineConfig({
 	plugins: [

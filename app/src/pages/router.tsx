@@ -1,4 +1,5 @@
 import { Route, Router } from "@solidjs/router";
+
 import Singularity from "./Singularity";
 
 const NuttyverseRouter = () => {

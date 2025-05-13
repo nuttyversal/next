@@ -1,7 +1,9 @@
+import "./styles/global.css";
+
 import { Effect, Option } from "effect";
 import { render } from "solid-js/web";
+
 import { NuttyverseRouter } from "./pages/router.tsx";
-import "./styles/global.css";
 
 /**
  * An effect that queries the root element of the application.
@@ -88,4 +90,4 @@ if (import.meta.env.MODE !== "test") {
 		.catch((error) => console.error("Application failed to start:", error));
 }
 
-export { getRootElement, renderApplication, main };
+export { getRootElement, main, renderApplication };

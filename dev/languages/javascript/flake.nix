@@ -35,6 +35,7 @@
 						buildInputs = [
 							nixfmtty.packages.${system}.default
 							pkgs.nodejs
+							pkgs.eslint_d
 							pkgs.nodePackages.eslint
 							pkgs.nodePackages.pnpm
 							pkgs.nodePackages.prettier
