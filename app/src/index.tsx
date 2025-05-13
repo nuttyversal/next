@@ -1,6 +1,7 @@
 import { Effect, Option } from "effect";
 import { render } from "solid-js/web";
-import { NuttyverseRouter } from "./pages/router";
+import { NuttyverseRouter } from "./pages/router.tsx";
+import "./styles/global.css";
 
 /**
  * An effect that queries the root element of the application.
