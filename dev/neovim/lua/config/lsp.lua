@@ -223,3 +223,34 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 		})
 	end,
 })
+
+vim.api.nvim_create_autocmd({ "FileType" }, {
+	desc = "Start the Tailwind CSS language server for relevant files",
+	group = vim.api.nvim_create_augroup("StartTailwindCSSLanguageServer", { clear = true }),
+	pattern = { "html", "css", "javascript", "javascriptreact", "typescript", "typescriptreact" },
+
+	callback = function()
+		vim.lsp.start({
+			name = "tailwindcss-language-server",
+			cmd = { "tailwindcss-language-server", "--stdio" },
+			root_dir = infer_project_root_directory({ "tailwind.config.js", "tailwind.config.ts", "package.json" }),
+
+			lint = {
+				cssConflict = "warning",
+				invalidApply = "error",
+				invalidScreen = "error",
+				invalidVariant = "error",
+				invalidConfigPath = "error",
+				invalidTailwindDirective = "error",
+				recommendedVariantOrder = "warning",
+			},
+
+			settings = {
+				tailwindCSS = {
+					validate = true,
+					classAttributes = { "class", "className", "classList" },
+				},
+			},
+		})
+	end,
+})
