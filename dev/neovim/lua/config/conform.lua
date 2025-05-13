@@ -12,8 +12,12 @@ conform.setup({
 	},
 
 	formatters_by_ft = {
-		lua = { "stylua" },
+		javascript = { "prettier" },
+		javascriptreact = { "prettier" },
+		typescript = { "prettier" },
+		typescriptreact = { "prettier" },
 		json = { "prettier" },
+		lua = { "stylua" },
 		nix = { "nixfmtty" },
 	},
 
