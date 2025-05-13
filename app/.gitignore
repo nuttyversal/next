@@ -3,6 +3,7 @@ node_modules/
 
 # build output
 dist/
+stats.html
 
 # test output
 coverage/
