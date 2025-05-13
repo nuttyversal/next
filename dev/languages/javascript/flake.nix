@@ -41,6 +41,7 @@
 							pkgs.nodePackages.sass
 							pkgs.nodePackages.ts-node
 							pkgs.nodePackages.typescript
+							pkgs.nodePackages.typescript-language-server
 						];
 					};
 				};
