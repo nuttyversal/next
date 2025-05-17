@@ -23,6 +23,12 @@ importers:
       tailwindcss:
         specifier: ^4.1.6
         version: 4.1.6
+      temporal-polyfill:
+        specifier: ^0.3.0
+        version: 0.3.0
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
     devDependencies:
       '@effect/language-service':
         specifier: ^0.14.0
@@ -51,6 +57,9 @@ importers:
       eslint-plugin-simple-import-sort:
         specifier: ^12.1.1
         version: 12.1.1(eslint@9.26.0(jiti@2.4.2))
+      fast-check:
+        specifier: ^4.1.1
+        version: 4.1.1
       jsdom:
         specifier: ^26.1.0
         version: 26.1.0
@@ -1173,6 +1182,10 @@ packages:
     resolution: {integrity: sha512-h5+1OzzfCC3Ef7VbtKdcv7zsstUQwUDlYpUTvjeUsJAssPgLn7QzbboPtL5ro04Mq0rPOsMzl7q5hIbRs2wD1A==}
     engines: {node: '>=8.0.0'}
 
+  fast-check@4.1.1:
+    resolution: {integrity: sha512-8+yQYeNYqBfWem0Nmm7BUnh27wm+qwGvI0xln60c8RPM5rVekxZf/Ildng2GNBfjaG6utIebFmVBPlNtZlBLxg==}
+    engines: {node: '>=12.17.0'}
+
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
 
@@ -1805,6 +1818,9 @@ packages:
   pure-rand@6.1.0:
     resolution: {integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==}
 
+  pure-rand@7.0.1:
+    resolution: {integrity: sha512-oTUZM/NAZS8p7ANR3SHh30kXB+zK2r2BPcEn/awJIbOvq82WoMN4p62AWWp3Hhw50G0xMsw1mhIBLqHw64EcNQ==}
+
   qs@6.14.0:
     resolution: {integrity: sha512-YWWTjgABSKcvs/nWBi9PycY/JiPJqOD4JA6o9Sej2AtvSGarXxKC3OQSk4pAarbdQlKAh5D4FCQkJNkW+GAn3w==}
     engines: {node: '>=0.6'}
@@ -2010,6 +2026,12 @@ packages:
     resolution: {integrity: sha512-5S7Va8hKfV7W5U6g3aYxXmlPoZVAwUMy9AOKyF2fVuZa2UD3qZjg578OrLRt8PcNN1PleVaL/5/yYATNL0ICUw==}
     engines: {node: '>=18'}
 
+  temporal-polyfill@0.3.0:
+    resolution: {integrity: sha512-qNsTkX9K8hi+FHDfHmf22e/OGuXmfBm9RqNismxBrnSmZVJKegQ+HYYXT+R7Ha8F/YSm2Y34vmzD4cxMu2u95g==}
+
+  temporal-spec@0.3.0:
+    resolution: {integrity: sha512-n+noVpIqz4hYgFSMOSiINNOUOMFtV5cZQNCmmszA6GiVFVRt3G7AqVyhXjhCSmowvQn+NsGn+jMDMKJYHd3bSQ==}
+
   test-exclude@7.0.1:
     resolution: {integrity: sha512-pFYqmTw68LXVjeWJMST4+borgQP2AyMNbg1BpZh9LbyhUeNkeaPF9gzfPGUAnSMV3qPYdWUwDIjjCLiSDOl7vg==}
     engines: {node: '>=18'}
@@ -2111,6 +2133,10 @@ packages:
 
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
+
+  uuid@11.1.0:
+    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
+    hasBin: true
 
   validate-html-nesting@1.2.2:
     resolution: {integrity: sha512-hGdgQozCsQJMyfK5urgFcWEqsSSrK63Awe0t/IMR0bZ0QMtnuaiHzThW81guu3qx9abLi99NEuiaN6P9gVYsNg==}
@@ -3412,6 +3438,10 @@ snapshots:
     dependencies:
       pure-rand: 6.1.0
 
+  fast-check@4.1.1:
+    dependencies:
+      pure-rand: 7.0.1
+
   fast-deep-equal@3.1.3: {}
 
   fast-glob@3.3.3:
@@ -3935,6 +3965,8 @@ snapshots:
 
   pure-rand@6.1.0: {}
 
+  pure-rand@7.0.1: {}
+
   qs@6.14.0:
     dependencies:
       side-channel: 1.1.0
@@ -4173,6 +4205,12 @@ snapshots:
       mkdirp: 3.0.1
       yallist: 5.0.0
 
+  temporal-polyfill@0.3.0:
+    dependencies:
+      temporal-spec: 0.3.0
+
+  temporal-spec@0.3.0: {}
+
   test-exclude@7.0.1:
     dependencies:
       '@istanbuljs/schema': 0.1.3
@@ -4257,6 +4295,8 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
+
+  uuid@11.1.0: {}
 
   validate-html-nesting@1.2.2: {}
 
