@@ -2,6 +2,7 @@ pub mod block_content;
 pub mod content_block;
 pub mod content_context;
 pub mod content_link;
+pub mod date_time_rfc_3339;
 pub mod fractional_index;
 pub mod navigator;
 pub mod nutty_id;

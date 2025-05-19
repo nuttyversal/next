@@ -1,22 +1,26 @@
-use chrono::DateTime;
-use chrono::Utc;
+use chrono::Local;
+use chrono::TimeZone;
 use serde::Deserialize;
 use serde::Serialize;
+use sqlx::FromRow;
 use thiserror::Error;
 
 use crate::models::BlockContent;
 use crate::models::FractionalIndex;
 use crate::models::NuttyId;
+use crate::models::date_time_rfc_3339::DateTimeRfc3339;
 
 /// A block of content in the Nuttyverse.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ContentBlock {
+	#[sqlx(rename = "id")]
 	nutty_id: NuttyId,
 	pub parent_id: Option<NuttyId>,
 	pub f_index: FractionalIndex,
+	#[sqlx(json)]
 	pub content: BlockContent,
-	created_at: DateTime<Utc>,
-	updated_at: DateTime<Utc>,
+	created_at: DateTimeRfc3339,
+	updated_at: DateTimeRfc3339,
 }
 
 impl ContentBlock {
@@ -26,8 +30,8 @@ impl ContentBlock {
 		parent_id: Option<NuttyId>,
 		f_index: FractionalIndex,
 		content: BlockContent,
-		created_at: DateTime<Utc>,
-		updated_at: DateTime<Utc>,
+		created_at: DateTimeRfc3339,
+		updated_at: DateTimeRfc3339,
 	) -> Self {
 		Self {
 			nutty_id,
@@ -41,7 +45,16 @@ impl ContentBlock {
 
 	/// Create a new content block with a generated identifier (UUIDv7) — right now!
 	pub fn now(parent_id: Option<NuttyId>, f_index: FractionalIndex, content: BlockContent) -> Self {
-		let now = Utc::now();
+		let nutty_id = NuttyId::now();
+		let timestamp = nutty_id.timestamp() as i64;
+
+		let now = Local
+			.timestamp_millis_opt(timestamp)
+			.single()
+			.unwrap()
+			.fixed_offset()
+			.into();
+
 		Self::new(NuttyId::now(), parent_id, f_index, content, now, now)
 	}
 
@@ -84,8 +97,8 @@ pub struct ContentBlockBuilder {
 	parent_id: Option<NuttyId>,
 	f_index: Option<FractionalIndex>,
 	content: Option<BlockContent>,
-	created_at: Option<DateTime<Utc>>,
-	updated_at: Option<DateTime<Utc>>,
+	created_at: Option<DateTimeRfc3339>,
+	updated_at: Option<DateTimeRfc3339>,
 }
 
 impl ContentBlockBuilder {
@@ -114,13 +127,13 @@ impl ContentBlockBuilder {
 	}
 
 	/// Set the "created at" time.
-	pub fn created_at(mut self, created_at: DateTime<Utc>) -> Self {
+	pub fn created_at(mut self, created_at: DateTimeRfc3339) -> Self {
 		self.created_at = Some(created_at);
 		self
 	}
 
 	/// Set the "updated at" time.
-	pub fn updated_at(mut self, updated_at: DateTime<Utc>) -> Self {
+	pub fn updated_at(mut self, updated_at: DateTimeRfc3339) -> Self {
 		self.updated_at = Some(updated_at);
 		self
 	}

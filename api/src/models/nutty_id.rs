@@ -4,6 +4,8 @@ use std::fmt::Formatter;
 
 use proptest::prelude::Strategy;
 use serde::Serialize;
+use sqlx::FromRow;
+use sqlx::Type;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -16,15 +18,14 @@ use uuid::Uuid;
 /// Why 41 bits? Because 2^42 > 58^7 > 2^41.
 /// Why base-58? Because '0', 'O', 'I', and 'l' are ambiguous.
 /// Why do this at all? Because it's a fun idea.
-#[derive(Debug, Copy, Clone, Eq, Hash, PartialEq)]
-pub struct NuttyId {
-	uuid: Uuid,
-}
+#[derive(Debug, Copy, Clone, Eq, Hash, PartialEq, FromRow, Type)]
+#[sqlx(transparent)]
+pub struct NuttyId(Uuid);
 
 impl NuttyId {
 	/// Derive a Nutty ID from a UUID.
 	pub fn new(uuid: Uuid) -> Self {
-		Self { uuid }
+		Self(uuid)
 	}
 
 	/// Create a new Nutty ID from a UUIDv7.
@@ -35,18 +36,18 @@ impl NuttyId {
 
 	/// Get the UUID.
 	pub fn uuid(&self) -> &Uuid {
-		&self.uuid
+		&self.0
 	}
 
 	/// Get the Nutty ID.
 	pub fn nid(&self) -> String {
-		let last_41_bits = extract_last_41_bits(&self.uuid);
+		let last_41_bits = extract_last_41_bits(self.uuid());
 		encode_base_58(last_41_bits, 7)
 	}
 
 	/// Get the Unix timestamp (in milliseconds) encoded in the UUIDv7.
 	pub fn timestamp(&self) -> u64 {
-		let bytes = self.uuid.as_bytes();
+		let bytes = self.uuid().as_bytes();
 
 		// Extract the first 48 bits (6 bytes).
 		((bytes[0] as u64) << 40)
@@ -63,9 +64,15 @@ impl NuttyId {
 	}
 }
 
+impl From<Uuid> for NuttyId {
+	fn from(value: Uuid) -> Self {
+		Self::new(value)
+	}
+}
+
 impl Display for NuttyId {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-		let uuid = self.uuid.as_u128();
+		let uuid = self.uuid().as_u128();
 		let uuid = encode_base_58(uuid, 22);
 		let nid = self.nid();
 		write!(f, "{uuid}:{nid}")
@@ -77,7 +84,7 @@ impl Serialize for NuttyId {
 	where
 		S: serde::Serializer,
 	{
-		let uuid = self.uuid.as_u128();
+		let uuid = self.uuid().as_u128();
 		let uuid = encode_base_58(uuid, 22);
 		let nid = self.nid();
 		serializer.serialize_str(&(uuid + ":" + &nid))

@@ -32,32 +32,21 @@ impl NavigatorRepository {
 	where
 		E: Executor<'e, Database = Postgres>,
 	{
-		// Insert the navigator record.
-		let record = sqlx::query!(
+		Ok(sqlx::query_as(
 			r#"
 				INSERT INTO auth.navigators (id, nutty_id, name, pass, created_at, updated_at)
 				VALUES ($1, $2, $3, $4, $5, $6)
 				RETURNING id, name, pass, created_at, updated_at
 			"#,
-			navigator.nutty_id().uuid(),
-			navigator.nutty_id().nid(),
-			navigator.name(),
-			navigator.pass(),
-			navigator.created_at(),
-			navigator.updated_at(),
 		)
+		.bind(navigator.nutty_id().uuid())
+		.bind(navigator.nutty_id().nid())
+		.bind(navigator.name())
+		.bind(navigator.pass())
+		.bind(navigator.created_at())
+		.bind(navigator.updated_at())
 		.fetch_one(executor)
-		.await?;
-
-		// Reconstruct the navigator.
-		Navigator::builder()
-			.nutty_id(NuttyId::new(record.id))
-			.name(record.name)
-			.password_hash(record.pass)
-			.created_at(record.created_at)
-			.updated_at(record.updated_at)
-			.try_build()
-			.map_err(NavigatorRepositoryError::BuilderError)
+		.await?)
 	}
 
 	/// Create a new navigator.
@@ -77,32 +66,16 @@ impl NavigatorRepository {
 	where
 		E: Executor<'e, Database = Postgres>,
 	{
-		// Find the navigator.
-		let record = sqlx::query!(
+		Ok(sqlx::query_as(
 			r#"
 				SELECT id, name, pass, created_at, updated_at
 				FROM auth.navigators
 				WHERE id = $1
 			"#,
-			id.uuid(),
 		)
+		.bind(id.uuid())
 		.fetch_optional(executor)
-		.await?;
-
-		// Return the navigator if found.
-		match record {
-			Some(record) => Ok(Some(
-				Navigator::builder()
-					.nutty_id(NuttyId::new(record.id))
-					.name(record.name)
-					.password_hash(record.pass)
-					.created_at(record.created_at)
-					.updated_at(record.updated_at)
-					.try_build()
-					.map_err(NavigatorRepositoryError::BuilderError)?,
-			)),
-			None => Ok(None),
-		}
+		.await?)
 	}
 
 	/// Get a navigator by ID.
@@ -122,32 +95,16 @@ impl NavigatorRepository {
 	where
 		E: Executor<'e, Database = Postgres>,
 	{
-		// Find the navigator.
-		let record = sqlx::query!(
+		Ok(sqlx::query_as(
 			r#"
 				SELECT id, name, pass, created_at, updated_at
 				FROM auth.navigators
 				WHERE name = $1
 			"#,
-			name,
 		)
+		.bind(name)
 		.fetch_optional(executor)
-		.await?;
-
-		// Return the navigator if found.
-		match record {
-			Some(record) => Ok(Some(
-				Navigator::builder()
-					.nutty_id(NuttyId::new(record.id))
-					.name(record.name)
-					.password_hash(record.pass)
-					.created_at(record.created_at)
-					.updated_at(record.updated_at)
-					.try_build()
-					.map_err(NavigatorRepositoryError::BuilderError)?,
-			)),
-			None => Ok(None),
-		}
+		.await?)
 	}
 
 	/// Get a navigator by name.
@@ -168,29 +125,19 @@ impl NavigatorRepository {
 		E: Executor<'e, Database = Postgres>,
 	{
 		// Update the navigator record.
-		let record = sqlx::query!(
+		Ok(sqlx::query_as(
 			r#"
 				UPDATE auth.navigators
 				SET name = $2, pass = $3
 				WHERE id = $1
 				RETURNING id, name, pass, created_at, updated_at
 			"#,
-			navigator.nutty_id().uuid(),
-			navigator.name(),
-			navigator.pass(),
 		)
+		.bind(navigator.nutty_id().uuid())
+		.bind(navigator.name())
+		.bind(navigator.pass())
 		.fetch_one(executor)
-		.await?;
-
-		// Reconstruct the navigator.
-		Navigator::builder()
-			.nutty_id(NuttyId::new(record.id))
-			.name(record.name)
-			.password_hash(record.pass)
-			.created_at(record.created_at)
-			.updated_at(record.updated_at)
-			.try_build()
-			.map_err(NavigatorRepositoryError::BuilderError)
+		.await?)
 	}
 
 	/// Update a navigator account.
@@ -308,32 +255,22 @@ impl NavigatorRepository {
 	where
 		E: Executor<'e, Database = Postgres>,
 	{
-		let record = sqlx::query!(
+		Ok(sqlx::query_as(
 			r#"
 				INSERT INTO auth.sessions (id, nutty_id, navigator_id, user_agent, expires_at, created_at, updated_at)
 				VALUES ($1, $2, $3, $4, $5, $6, $7)
 				RETURNING id, navigator_id, user_agent, expires_at, created_at, updated_at
 			"#,
-			session.nutty_id().uuid(),
-			session.nutty_id().nid(),
-			session.navigator_id().uuid(),
-			session.user_agent(),
-			session.expires_at(),
-			session.created_at(),
-			session.updated_at(),
 		)
+			.bind(session.nutty_id().uuid())
+			.bind(session.nutty_id().nid())
+			.bind(session.navigator_id().uuid())
+			.bind(session.user_agent())
+			.bind(session.expires_at())
+			.bind(session.created_at())
+			.bind(session.updated_at())
 		.fetch_one(executor)
-		.await?;
-
-		Session::builder()
-			.nutty_id(NuttyId::new(record.id))
-			.navigator_id(NuttyId::new(record.navigator_id))
-			.user_agent(record.user_agent)
-			.expires_at(record.expires_at)
-			.created_at(record.created_at)
-			.updated_at(record.updated_at)
-			.try_build()
-			.map_err(NavigatorRepositoryError::SessionBuilderError)
+		.await?)
 	}
 
 	/// Create a new session for a navigator.
@@ -353,33 +290,16 @@ impl NavigatorRepository {
 	where
 		E: Executor<'e, Database = Postgres>,
 	{
-		// Find the session.
-		let record = sqlx::query!(
+		Ok(sqlx::query_as(
 			r#"
 				SELECT id, navigator_id, user_agent, expires_at, created_at, updated_at
 				FROM auth.sessions
 				WHERE id = $1
 			"#,
-			id.uuid(),
 		)
+		.bind(id.uuid())
 		.fetch_optional(executor)
-		.await?;
-
-		// Return the session if found.
-		match record {
-			Some(record) => Ok(Some(
-				Session::builder()
-					.nutty_id(NuttyId::new(record.id))
-					.navigator_id(NuttyId::new(record.navigator_id))
-					.user_agent(record.user_agent)
-					.expires_at(record.expires_at)
-					.created_at(record.created_at)
-					.updated_at(record.updated_at)
-					.try_build()
-					.map_err(NavigatorRepositoryError::SessionBuilderError)?,
-			)),
-			None => Ok(None),
-		}
+		.await?)
 	}
 
 	/// Get a session by ID.

@@ -1,23 +1,25 @@
-use chrono::DateTime;
+use chrono::Local;
 use chrono::TimeZone;
-use chrono::Utc;
 use serde::Deserialize;
 use serde::Serialize;
+use sqlx::FromRow;
 use thiserror::Error;
 
 use crate::models::NuttyId;
+use crate::models::date_time_rfc_3339::DateTimeRfc3339;
 
 /// Represents an active [Navigator] login session.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Session {
 	#[serde(skip_serializing)]
+	#[sqlx(rename = "id")]
 	nutty_id: NuttyId,
 	navigator_id: NuttyId,
 	#[serde(skip_serializing)]
 	user_agent: String,
-	expires_at: DateTime<Utc>,
-	created_at: DateTime<Utc>,
-	updated_at: DateTime<Utc>,
+	expires_at: DateTimeRfc3339,
+	created_at: DateTimeRfc3339,
+	updated_at: DateTimeRfc3339,
 }
 
 impl Session {
@@ -30,16 +32,20 @@ impl Session {
 		let nutty_id = NuttyId::now();
 		let timestamp = nutty_id.timestamp() as i64;
 
-		let now = Utc
+		let now: DateTimeRfc3339 = Local
 			.timestamp_millis_opt(timestamp)
 			.single()
-			.ok_or(SessionError::InvalidTimestamp { timestamp })?;
+			.ok_or(SessionError::InvalidTimestamp { timestamp })?
+			.fixed_offset()
+			.into();
+
+		let expires_at = (*now.inner() + duration).into();
 
 		Ok(Self {
 			nutty_id,
 			navigator_id,
 			user_agent,
-			expires_at: now + duration,
+			expires_at,
 			created_at: now,
 			updated_at: now,
 		})
@@ -47,13 +53,14 @@ impl Session {
 
 	/// Check if the session has expired.
 	pub fn is_expired(&self) -> bool {
-		Utc::now() > self.expires_at
+		Local::now().fixed_offset() > *self.expires_at.inner()
 	}
 
 	/// Extend the session's expiration time.
 	pub fn extend(&mut self, duration: chrono::Duration) {
-		self.expires_at = Utc::now() + duration;
-		self.updated_at = Utc::now();
+		let now = Local::now().fixed_offset();
+		self.expires_at = (now + duration).into();
+		self.updated_at = now.into();
 	}
 
 	/// Create a builder for a new session.
@@ -77,17 +84,17 @@ impl Session {
 	}
 
 	/// Get the expiration time.
-	pub fn expires_at(&self) -> &DateTime<Utc> {
+	pub fn expires_at(&self) -> &DateTimeRfc3339 {
 		&self.expires_at
 	}
 
 	/// Get the creation time.
-	pub fn created_at(&self) -> &DateTime<Utc> {
+	pub fn created_at(&self) -> &DateTimeRfc3339 {
 		&self.created_at
 	}
 
 	/// Get the last update time.
-	pub fn updated_at(&self) -> &DateTime<Utc> {
+	pub fn updated_at(&self) -> &DateTimeRfc3339 {
 		&self.updated_at
 	}
 }
@@ -119,9 +126,9 @@ pub struct SessionBuilder {
 	nutty_id: Option<NuttyId>,
 	navigator_id: Option<NuttyId>,
 	user_agent: Option<String>,
-	expires_at: Option<DateTime<Utc>>,
-	created_at: Option<DateTime<Utc>>,
-	updated_at: Option<DateTime<Utc>>,
+	expires_at: Option<DateTimeRfc3339>,
+	created_at: Option<DateTimeRfc3339>,
+	updated_at: Option<DateTimeRfc3339>,
 }
 
 impl SessionBuilder {
@@ -144,19 +151,19 @@ impl SessionBuilder {
 	}
 
 	/// Set the expiration time.
-	pub fn expires_at(mut self, expires_at: DateTime<Utc>) -> Self {
+	pub fn expires_at(mut self, expires_at: DateTimeRfc3339) -> Self {
 		self.expires_at = Some(expires_at);
 		self
 	}
 
 	/// Set the creation time.
-	pub fn created_at(mut self, created_at: DateTime<Utc>) -> Self {
+	pub fn created_at(mut self, created_at: DateTimeRfc3339) -> Self {
 		self.created_at = Some(created_at);
 		self
 	}
 
 	/// Set the last update time.
-	pub fn updated_at(mut self, updated_at: DateTime<Utc>) -> Self {
+	pub fn updated_at(mut self, updated_at: DateTimeRfc3339) -> Self {
 		self.updated_at = Some(updated_at);
 		self
 	}
@@ -263,16 +270,23 @@ mod tests {
 		let nutty_id = NuttyId::now();
 		let navigator_id = NuttyId::now();
 		let user_agent = "test-agent".to_string();
-		let now = Utc::now();
-		let expires_at = now + chrono::Duration::days(30);
+		let timestamp = nutty_id.timestamp() as i64;
+
+		let now = Local
+			.timestamp_millis_opt(timestamp)
+			.single()
+			.unwrap()
+			.fixed_offset();
+
+		let expires_at = (now + chrono::Duration::days(30)).into();
 
 		let session = Session::builder()
 			.nutty_id(nutty_id)
 			.navigator_id(navigator_id)
 			.user_agent(user_agent)
 			.expires_at(expires_at)
-			.created_at(now)
-			.updated_at(now)
+			.created_at(now.into())
+			.updated_at(now.into())
 			.try_build()
 			.unwrap();
 
@@ -284,16 +298,23 @@ mod tests {
 		let nutty_id = NuttyId::now();
 		let navigator_id = NuttyId::now();
 		let user_agent = "test-agent".to_string();
-		let now = Utc::now();
-		let expires_at = now + chrono::Duration::days(30);
+		let timestamp = nutty_id.timestamp() as i64;
+
+		let now = Local
+			.timestamp_millis_opt(timestamp)
+			.single()
+			.unwrap()
+			.fixed_offset();
+
+		let expires_at = (now + chrono::Duration::days(30)).into();
 
 		// Test missing nutty_id.
 		let result = Session::builder()
 			.navigator_id(navigator_id)
 			.user_agent(user_agent.clone())
 			.expires_at(expires_at)
-			.created_at(now)
-			.updated_at(now)
+			.created_at(now.into())
+			.updated_at(now.into())
 			.try_build();
 
 		assert!(matches!(result, Err(SessionBuilderError::MissingNuttyId)));
@@ -303,8 +324,8 @@ mod tests {
 			.nutty_id(nutty_id)
 			.user_agent(user_agent.clone())
 			.expires_at(expires_at)
-			.created_at(now)
-			.updated_at(now)
+			.created_at(now.into())
+			.updated_at(now.into())
 			.try_build();
 
 		assert!(matches!(
@@ -317,8 +338,8 @@ mod tests {
 			.nutty_id(nutty_id)
 			.navigator_id(navigator_id)
 			.expires_at(expires_at)
-			.created_at(now)
-			.updated_at(now)
+			.created_at(now.into())
+			.updated_at(now.into())
 			.try_build();
 
 		assert!(matches!(result, Err(SessionBuilderError::MissingUserAgent)));
@@ -328,8 +349,8 @@ mod tests {
 			.nutty_id(nutty_id)
 			.navigator_id(navigator_id)
 			.user_agent(user_agent.clone())
-			.created_at(now)
-			.updated_at(now)
+			.created_at(now.into())
+			.updated_at(now.into())
 			.try_build();
 
 		assert!(matches!(result, Err(SessionBuilderError::MissingExpiresAt)));
@@ -340,7 +361,7 @@ mod tests {
 			.navigator_id(navigator_id)
 			.user_agent(user_agent.clone())
 			.expires_at(expires_at)
-			.updated_at(now)
+			.updated_at(now.into())
 			.try_build();
 
 		assert!(matches!(result, Err(SessionBuilderError::MissingCreatedAt)));
@@ -351,7 +372,7 @@ mod tests {
 			.navigator_id(navigator_id)
 			.user_agent(user_agent)
 			.expires_at(expires_at)
-			.created_at(now)
+			.created_at(now.into())
 			.try_build();
 
 		assert!(matches!(result, Err(SessionBuilderError::MissingUpdatedAt)));
@@ -362,15 +383,23 @@ mod tests {
 		let nutty_id = NuttyId::now();
 		let navigator_id = NuttyId::now();
 		let user_agent = "test-agent".to_string();
-		let now = Utc::now();
-		let earlier = now - chrono::Duration::days(1);
+		let timestamp = nutty_id.timestamp() as i64;
+
+		let now = Local
+			.timestamp_millis_opt(timestamp)
+			.single()
+			.unwrap()
+			.fixed_offset();
+
+		let earlier = (now - chrono::Duration::days(1)).into();
+		let expires_at = (now + chrono::Duration::days(30)).into();
 
 		let result = Session::builder()
 			.nutty_id(nutty_id)
 			.navigator_id(navigator_id)
 			.user_agent(user_agent)
-			.expires_at(now + chrono::Duration::days(30))
-			.created_at(now)
+			.expires_at(expires_at)
+			.created_at(now.into())
 			.updated_at(earlier)
 			.try_build();
 

@@ -4,24 +4,26 @@ use argon2::password_hash::PasswordHasher;
 use argon2::password_hash::PasswordVerifier;
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
-use chrono::DateTime;
+use chrono::Local;
 use chrono::TimeZone;
-use chrono::Utc;
 use serde::Deserialize;
 use serde::Serialize;
+use sqlx::FromRow;
 use thiserror::Error;
 
 use crate::models::NuttyId;
+use crate::models::date_time_rfc_3339::DateTimeRfc3339;
 
 /// A registered visitor wandering about in the Nuttyverse.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Navigator {
+	#[sqlx(rename = "id")]
 	nutty_id: NuttyId,
 	name: String,
 	#[serde(skip_serializing)]
 	pass: String,
-	created_at: DateTime<Utc>,
-	updated_at: DateTime<Utc>,
+	created_at: DateTimeRfc3339,
+	updated_at: DateTimeRfc3339,
 }
 
 impl Navigator {
@@ -40,10 +42,12 @@ impl Navigator {
 		let nutty_id = NuttyId::now();
 		let timestamp = nutty_id.timestamp() as i64;
 
-		let now = Utc
+		let now = Local
 			.timestamp_millis_opt(timestamp)
 			.single()
-			.ok_or(NavigatorError::InvalidTimestamp { timestamp })?;
+			.ok_or(NavigatorError::InvalidTimestamp { timestamp })?
+			.fixed_offset()
+			.into();
 
 		Ok(Self {
 			nutty_id,
@@ -129,12 +133,12 @@ impl Navigator {
 	}
 
 	/// Get the "created_at" time.
-	pub fn created_at(&self) -> &DateTime<Utc> {
+	pub fn created_at(&self) -> &DateTimeRfc3339 {
 		&self.created_at
 	}
 
 	/// Get the "updated_at" time.
-	pub fn updated_at(&self) -> &DateTime<Utc> {
+	pub fn updated_at(&self) -> &DateTimeRfc3339 {
 		&self.updated_at
 	}
 }
@@ -146,8 +150,8 @@ pub struct NavigatorBuilder {
 	name: Option<String>,
 	password: Option<String>,
 	password_is_hashed: bool,
-	created_at: Option<DateTime<Utc>>,
-	updated_at: Option<DateTime<Utc>>,
+	created_at: Option<DateTimeRfc3339>,
+	updated_at: Option<DateTimeRfc3339>,
 }
 
 impl NavigatorBuilder {
@@ -177,13 +181,13 @@ impl NavigatorBuilder {
 	}
 
 	/// Set the "created at" time.
-	pub fn created_at(mut self, created_at: DateTime<Utc>) -> Self {
+	pub fn created_at(mut self, created_at: DateTimeRfc3339) -> Self {
 		self.created_at = Some(created_at);
 		self
 	}
 
 	/// Set the "updated at" time.
-	pub fn updated_at(mut self, updated_at: DateTime<Utc>) -> Self {
+	pub fn updated_at(mut self, updated_at: DateTimeRfc3339) -> Self {
 		self.updated_at = Some(updated_at);
 		self
 	}
@@ -466,8 +470,16 @@ mod tests {
 	#[test]
 	fn test_navigator_builder_with_custom_fields() {
 		let nutty_id = NuttyId::now();
-		let now = Utc::now();
-		let later = now + chrono::Duration::seconds(10);
+		let timestamp = nutty_id.timestamp() as i64;
+
+		let now: DateTimeRfc3339 = Local
+			.timestamp_millis_opt(timestamp)
+			.single()
+			.unwrap()
+			.fixed_offset()
+			.into();
+
+		let later = (*now.inner() + chrono::Duration::seconds(10)).into();
 
 		// Create a navigator with custom fields.
 		let navigator = Navigator::builder()

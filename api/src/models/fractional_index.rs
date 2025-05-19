@@ -3,6 +3,8 @@ use std::iter::repeat_n;
 
 use serde::Deserialize;
 use serde::Serialize;
+use sqlx::FromRow;
+use sqlx::Type;
 use thiserror::Error;
 
 /// A fractional index for ordering content blocks.
@@ -11,7 +13,8 @@ use thiserror::Error;
 /// a digit in the range [33, 126] (the set of visible ASCII characters),
 /// which enables generation of new index between any two existing indices
 /// by averaging their values together.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromRow, Type)]
+#[sqlx(transparent)]
 pub struct FractionalIndex(String);
 
 impl FractionalIndex {

@@ -5,7 +5,6 @@ use thiserror::Error;
 use crate::models::ContentBlock;
 use crate::models::ContentLink;
 use crate::models::DissociatedNuttyId;
-use crate::models::FractionalIndex;
 use crate::models::NuttyId;
 use crate::models::content_block::ContentBlockBuilderError;
 use crate::models::content_block::ContentBlockError;
@@ -103,43 +102,16 @@ impl ContentRepository {
 	where
 		E: Executor<'e, Database = Postgres>,
 	{
-		// Find the content block.
-		let record = sqlx::query!(
+		Ok(sqlx::query_as(
 			r#"
 				SELECT id, parent_id, f_index, content, created_at, updated_at
 				FROM content.blocks
 				WHERE nutty_id = $1
 			"#,
-			nutty_id.nid()
 		)
+		.bind(nutty_id.nid())
 		.fetch_optional(executor)
-		.await?;
-
-		match record {
-			// Found the content block!
-			Some(record) => {
-				let nutty_id = NuttyId::new(record.id);
-				let parent_id = record.parent_id.map(NuttyId::new);
-				let f_index = FractionalIndex::new(record.f_index)?;
-				let content = ContentBlock::deserialize_content(record.content)?;
-				let created_at = record.created_at;
-				let updated_at = record.updated_at;
-
-				Ok(Some(
-					ContentBlock::builder()
-						.nutty_id(nutty_id)
-						.parent_id(parent_id)
-						.f_index(f_index)
-						.content(content)
-						.created_at(created_at)
-						.updated_at(updated_at)
-						.try_build()?,
-				))
-			}
-
-			// It does not exist…
-			None => Ok(None),
-		}
+		.await?)
 	}
 
 	/// Get a content block by its Nutty ID.
@@ -159,7 +131,7 @@ impl ContentRepository {
 	where
 		E: Executor<'e, Database = Postgres>,
 	{
-		let records = sqlx::query!(
+		Ok(sqlx::query_as(
 			r#"
 				WITH RECURSIVE ancestors AS (
 					SELECT b.*, 0 AS level
@@ -175,40 +147,10 @@ impl ContentRepository {
 				WHERE level > 0
 				ORDER BY level;
 			"#,
-			nutty_id.nid()
 		)
+		.bind(nutty_id.nid())
 		.fetch_all(executor)
-		.await?;
-
-		let mut blocks = Vec::new();
-
-		for record in records {
-			if let (Some(id), Some(f_index), Some(content), Some(created_at), Some(updated_at)) = (
-				record.id,
-				record.f_index,
-				record.content,
-				record.created_at,
-				record.updated_at,
-			) {
-				let nutty_id = NuttyId::new(id);
-				let parent_id = record.parent_id.map(NuttyId::new);
-				let f_index = FractionalIndex::new(f_index)?;
-				let content = ContentBlock::deserialize_content(content)?;
-
-				blocks.push(
-					ContentBlock::builder()
-						.nutty_id(nutty_id)
-						.parent_id(parent_id)
-						.f_index(f_index)
-						.content(content)
-						.created_at(created_at)
-						.updated_at(updated_at)
-						.try_build()?,
-				);
-			}
-		}
-
-		Ok(blocks)
+		.await?)
 	}
 
 	/// Get all ancestors of a content block.
@@ -228,7 +170,7 @@ impl ContentRepository {
 	where
 		E: Executor<'e, Database = Postgres>,
 	{
-		let records = sqlx::query!(
+		Ok(sqlx::query_as(
 			r#"
 				WITH RECURSIVE descendants AS (
 					SELECT b.*, 0 AS level
@@ -244,40 +186,10 @@ impl ContentRepository {
 				WHERE level > 0
 				ORDER BY level;
 			"#,
-			nutty_id.nid()
 		)
+		.bind(nutty_id.nid())
 		.fetch_all(executor)
-		.await?;
-
-		let mut blocks = Vec::new();
-
-		for record in records {
-			if let (Some(id), Some(f_index), Some(content), Some(created_at), Some(updated_at)) = (
-				record.id,
-				record.f_index,
-				record.content,
-				record.created_at,
-				record.updated_at,
-			) {
-				let nutty_id = NuttyId::new(id);
-				let parent_id = record.parent_id.map(NuttyId::new);
-				let f_index = FractionalIndex::new(f_index)?;
-				let content = ContentBlock::deserialize_content(content)?;
-
-				blocks.push(
-					ContentBlock::builder()
-						.nutty_id(nutty_id)
-						.parent_id(parent_id)
-						.f_index(f_index)
-						.content(content)
-						.created_at(created_at)
-						.updated_at(updated_at)
-						.try_build()?,
-				);
-			}
-		}
-
-		Ok(blocks)
+		.await?)
 	}
 
 	/// Get all descendants of a content block.
@@ -297,8 +209,7 @@ impl ContentRepository {
 	where
 		E: Executor<'e, Database = Postgres>,
 	{
-		// Upsert the content block.
-		let record = sqlx::query!(
+		Ok(sqlx::query_as(
 			r#"
 				INSERT INTO content.blocks (id, nutty_id, parent_id, f_index, content)
 				VALUES ($1, $2, $3, $4, $5)
@@ -306,31 +217,14 @@ impl ContentRepository {
 				SET parent_id = EXCLUDED.parent_id, content = EXCLUDED.content, f_index = EXCLUDED.f_index
 				RETURNING id, nutty_id, parent_id, f_index, content, created_at, updated_at
 			"#,
-			content_block.nutty_id().uuid(),
-			content_block.nutty_id().nid(),
-			content_block.parent_id.clone().map(|id| id.uuid().clone()),
-			content_block.f_index.as_str(),
-			content_block.serialize_content()?,
 		)
+		.bind(content_block.nutty_id().uuid())
+		.bind(content_block.nutty_id().nid())
+		.bind(content_block.parent_id.map(|id| *id.uuid()))
+		.bind(content_block.f_index.as_str())
+		.bind(content_block.serialize_content()?)
 		.fetch_one(executor)
-		.await?;
-
-		// Get the updated content block.
-		let nutty_id = NuttyId::new(record.id);
-		let parent_id = record.parent_id.map(NuttyId::new);
-		let f_index = FractionalIndex::new(record.f_index)?;
-		let content = ContentBlock::deserialize_content(record.content)?;
-		let created_at = record.created_at;
-		let updated_at = record.updated_at;
-
-		Ok(ContentBlock::builder()
-			.nutty_id(nutty_id)
-			.parent_id(parent_id)
-			.f_index(f_index)
-			.content(content)
-			.created_at(created_at)
-			.updated_at(updated_at)
-			.try_build()?)
+		.await?)
 	}
 
 	/// Upsert a content block.
