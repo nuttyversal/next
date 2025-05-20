@@ -73,8 +73,8 @@ describe("StringFromNuttyId", () => {
 			// Validate the nid part matches what we expect.
 			expect(nuttyId.nid).toBe("jzBBXYW");
 
-			// Validate the timestamp is a Temporal.ZonedDateTime.
-			expect(nuttyId.timestamp).toBeInstanceOf(Temporal.ZonedDateTime);
+			// Validate the timestamp is a Temporal.Instant.
+			expect(nuttyId.timestamp).toBeInstanceOf(Temporal.Instant);
 		}
 	});
 

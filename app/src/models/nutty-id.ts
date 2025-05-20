@@ -150,8 +150,8 @@ type StringifiedNuttyId = typeof StringifiedNuttyId.Type;
  */
 class NuttyId extends Schema.Class<NuttyId>("NuttyId")({
 	uuid: UUID,
-	nid: DissociatedNuttyId,
-	timestamp: Schema.instanceOf(Temporal.ZonedDateTime),
+	nid: Schema.String,
+	timestamp: Schema.instanceOf(Temporal.Instant),
 }) {
 	/**
 	 * Create a NuttyId from a newly generated UUIDv7.
@@ -179,11 +179,9 @@ class NuttyId extends Schema.Class<NuttyId>("NuttyId")({
 			return Either.left(encodedNid.left);
 		}
 
-		// Extract timestamp and convert to ZonedDateTime.
+		// Extract timestamp and convert to Instant.
 		const timestampMs = extractTimestamp(uuid);
-		const instant = Temporal.Instant.fromEpochMilliseconds(timestampMs);
-		const timeZoneId = Temporal.Now.timeZoneId();
-		const timestamp = instant.toZonedDateTimeISO(timeZoneId);
+		const timestamp = Temporal.Instant.fromEpochMilliseconds(timestampMs);
 
 		return Either.right(
 			new NuttyId({
@@ -198,7 +196,7 @@ class NuttyId extends Schema.Class<NuttyId>("NuttyId")({
 /**
  * Schema transformation between `NuttyId` and `StringifiedNuttyId`.
  */
-const NuttyIdFromString = Schema.transformOrFail(StringifiedNuttyId, NuttyId, {
+const NuttyIdFromString = Schema.transformOrFail(Schema.String, NuttyId, {
 	strict: true,
 	decode: (input, _options, ast) => {
 		const [uuidBase58, nid] = input.split(":");
@@ -251,9 +249,7 @@ const NuttyIdFromString = Schema.transformOrFail(StringifiedNuttyId, NuttyId, {
 
 		// Extract timestamp (assuming UUIDv7).
 		const timestampMs = extractTimestamp(uuid);
-		const instant = Temporal.Instant.fromEpochMilliseconds(timestampMs);
-		const timeZoneId = Temporal.Now.timeZoneId();
-		const timestamp = instant.toZonedDateTimeISO(timeZoneId);
+		const timestamp = Temporal.Instant.fromEpochMilliseconds(timestampMs);
 
 		return ParseResult.succeed({
 			uuid,

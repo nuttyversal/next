@@ -1,4 +1,4 @@
-import { Either, Predicate, Schema } from "effect";
+import { Either, ParseResult, Predicate, Schema } from "effect";
 
 // Exclamation mark (!)
 const MIN_CHAR = 33;
@@ -164,4 +164,39 @@ class FractionalIndex extends Schema.Class<FractionalIndex>("FractionalIndex")({
 	}
 }
 
-export { FractionalIndex };
+/**
+ * Schema transformation between `FractionalIndex` and `string`.
+ */
+const FractionalIndexFromString = Schema.transformOrFail(
+	Schema.String,
+	FractionalIndex,
+	{
+		strict: true,
+		decode: (input, _options, ast) => {
+			if (!isValidFractionalIndex(input)) {
+				const invalidChar = input
+					.split("")
+					.find(Predicate.not(isValidFractionalIndex));
+
+				return ParseResult.fail(
+					new ParseResult.Type(
+						ast,
+						input,
+						`Invalid character: ${invalidChar}`,
+					),
+				);
+			}
+
+			return ParseResult.succeed(
+				new FractionalIndex({
+					index: input,
+				}),
+			);
+		},
+		encode: (input, _option, _ast) => {
+			return ParseResult.succeed(input.index);
+		},
+	},
+);
+
+export { FractionalIndex, FractionalIndexFromString };
