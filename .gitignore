@@ -1,2 +1,5 @@
 # build output
 result
+
+# environment
+.env
