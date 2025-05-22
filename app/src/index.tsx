@@ -70,13 +70,14 @@ const renderApplication = (root: HTMLElement) => {
 		try: () => {
 			let NuttyverseRuntimeProvider;
 			const hostname = window.location.hostname;
+			const isTestEnvironment = import.meta.env.MODE === "test";
 
-			if (hostname === "local.nuttyver.se") {
+			if (hostname === "local.nuttyver.se" || isTestEnvironment) {
 				NuttyverseRuntimeProvider = RuntimeLocalProvider;
 			} else if (hostname === "nuttyver.se") {
 				NuttyverseRuntimeProvider = RuntimeLiveProvider;
 			} else {
-				throw new Error("Nuttyverse running on unsupported domain.");
+				throw new Error("Nuttyverse running on unsupported domain");
 			}
 
 			return render(
@@ -90,7 +91,7 @@ const renderApplication = (root: HTMLElement) => {
 		},
 
 		catch: (error) => {
-			return new Error(`Failed to render application: ${error}.`);
+			return new Error(`Failed to render application: ${error}`);
 		},
 	});
 };
