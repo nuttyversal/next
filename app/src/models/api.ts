@@ -15,27 +15,27 @@ type ApiError = typeof ApiError.Type;
 /**
  * An API response containing a (maybe) single resource object.
  */
-const SingleResponse = <T>(schema: Schema.Schema<T>) => {
+const SingleResponse = <A, I>(schema: Schema.Schema<A, I>) => {
 	return Schema.Struct({
 		data: Schema.NullOr(schema),
 	}).pipe(Schema.annotations({ identifier: "SingleResponse" }));
 };
 
-type SingleResponse<T> = Schema.Schema.Type<
-	ReturnType<typeof SingleResponse<T>>
+type SingleResponse<A, I> = Schema.Schema.Type<
+	ReturnType<typeof SingleResponse<A, I>>
 >;
 
 /**
  * An API response containing multiple resource objects.
  */
-const MultipleResponse = <T>(schema: Schema.Schema<T>) => {
+const MultipleResponse = <A, I>(schema: Schema.Schema<A, I>) => {
 	return Schema.Struct({
 		data: Schema.Array(schema),
 	}).pipe(Schema.annotations({ identifier: "MultipleResponse" }));
 };
 
-type MultipleResponse<T> = Schema.Schema.Type<
-	ReturnType<typeof MultipleResponse<T>>
+type MultipleResponse<A, I> = Schema.Schema.Type<
+	ReturnType<typeof MultipleResponse<A, I>>
 >;
 
 /**

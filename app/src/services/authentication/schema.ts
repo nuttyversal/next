@@ -17,7 +17,7 @@ type RegisterRequest = typeof RegisterRequest.Type;
 /**
  * Register response model containing the navigator that was just created.
  */
-const RegisterResponse = SingleResponse(Schema.typeSchema(NavigatorFromApi));
+const RegisterResponse = SingleResponse(NavigatorFromApi);
 
 type RegisterResponse = typeof RegisterResponse.Type;
 
@@ -35,12 +35,10 @@ type LoginRequest = typeof LoginRequest.Type;
  * Login response model containing both navigator and session.
  */
 const LoginResponse = SingleResponse(
-	Schema.typeSchema(
-		Schema.Struct({
-			navigator: NavigatorFromApi,
-			session: SessionFromApi,
-		}),
-	),
+	Schema.Struct({
+		navigator: NavigatorFromApi,
+		session: SessionFromApi,
+	}),
 );
 
 type LoginResponse = typeof LoginResponse.Type;
@@ -48,7 +46,7 @@ type LoginResponse = typeof LoginResponse.Type;
 /**
  * "Me" response model containing the navigator that is currently logged in.
  */
-const MeResponse = SingleResponse(Schema.typeSchema(NavigatorFromApi));
+const MeResponse = SingleResponse(NavigatorFromApi);
 
 type MeResponse = typeof RegisterResponse.Type;
 
