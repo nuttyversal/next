@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 
+import { SingleResponse } from "~/models/api.ts";
 import { NavigatorFromApi, NavigatorName } from "~/models/navigator.ts";
 import { SessionFromApi } from "~/models/session.ts";
 
@@ -14,6 +15,13 @@ const RegisterRequest = Schema.Struct({
 type RegisterRequest = typeof RegisterRequest.Type;
 
 /**
+ * Register response model containing the navigator that was just created.
+ */
+const RegisterResponse = SingleResponse(Schema.typeSchema(NavigatorFromApi));
+
+type RegisterResponse = typeof RegisterResponse.Type;
+
+/**
  * Request payload for logging in a navigator.
  */
 const LoginRequest = Schema.Struct({
@@ -26,11 +34,28 @@ type LoginRequest = typeof LoginRequest.Type;
 /**
  * Login response model containing both navigator and session.
  */
-const LoginResponse = Schema.Struct({
-	navigator: NavigatorFromApi,
-	session: SessionFromApi,
-});
+const LoginResponse = SingleResponse(
+	Schema.typeSchema(
+		Schema.Struct({
+			navigator: NavigatorFromApi,
+			session: SessionFromApi,
+		}),
+	),
+);
 
 type LoginResponse = typeof LoginResponse.Type;
 
-export { LoginRequest, LoginResponse, RegisterRequest };
+/**
+ * "Me" response model containing the navigator that is currently logged in.
+ */
+const MeResponse = SingleResponse(Schema.typeSchema(NavigatorFromApi));
+
+type MeResponse = typeof RegisterResponse.Type;
+
+export {
+	LoginRequest,
+	LoginResponse,
+	MeResponse,
+	RegisterRequest,
+	RegisterResponse,
+};
