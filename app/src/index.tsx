@@ -5,6 +5,11 @@ import { render } from "solid-js/web";
 
 import { NuttyverseRouter } from "~/pages/router.tsx";
 
+import {
+	RuntimeLiveProvider,
+	RuntimeLocalProvider,
+} from "./services/context.tsx";
+
 /**
  * An effect that queries the root element of the application.
  * This is the element where the application will be rendered.
@@ -63,8 +68,27 @@ const hideLoadingState = (loading: HTMLElement) =>
 const renderApplication = (root: HTMLElement) => {
 	return Effect.try({
 		try: () => {
-			return render(() => <NuttyverseRouter />, root);
+			let NuttyverseRuntimeProvider;
+			const hostname = window.location.hostname;
+
+			if (hostname === "local.nuttyver.se") {
+				NuttyverseRuntimeProvider = RuntimeLocalProvider;
+			} else if (hostname === "nuttyver.se") {
+				NuttyverseRuntimeProvider = RuntimeLiveProvider;
+			} else {
+				throw new Error("Nuttyverse running on unsupported domain.");
+			}
+
+			return render(
+				() => (
+					<NuttyverseRuntimeProvider>
+						<NuttyverseRouter />
+					</NuttyverseRuntimeProvider>
+				),
+				root,
+			);
 		},
+
 		catch: (error) => {
 			return new Error(`Failed to render application: ${error}.`);
 		},
