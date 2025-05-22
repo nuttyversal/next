@@ -1,0 +1,22 @@
+FROM node:24-alpine
+
+# Install pnpm.
+RUN npm install -g pnpm
+
+# Set source directory.
+WORKDIR /app
+
+# Copy package files (for better caching).
+COPY package.json .
+
+# Install dependencies.
+RUN pnpm install
+
+# Copy source files.
+COPY . .
+
+# Expose Vite's default port.
+EXPOSE 3000
+
+# Command to start development server.
+CMD ["pnpm", "start"]

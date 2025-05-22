@@ -1,0 +1,12 @@
+local.nuttyver.se {
+	tls internal
+
+	handle_path /api/* {
+		uri strip_prefix /api
+		reverse_proxy nuttyverse-api:3000
+	}
+
+	handle {
+		reverse_proxy nuttyverse-app:3000
+	}
+}

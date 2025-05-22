@@ -1,13 +1,80 @@
+name: nuttyverse
+
 services:
-  gonic:
-    image: sentriz/gonic:latest
-    environment:
-      - TZ=America/Phoenix
+  gate:
+    container_name: nuttyverse-gate
+    image: caddy:alpine
     ports:
-      - 4747:80
+      - "80:80"
+      - "443:443"
     volumes:
-      - ~/Nuttyverse/Music:/music:ro
-      - ~/Nuttyverse/Data/gonic/data:/data
-      - ~/Nuttyverse/Data/gonic/playlists:/playlists
-      - ~/Nuttyverse/Data/gonic/podcasts:/podcasts
-      - ~/Nuttyverse/Data/gonic/cache:/cache
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - app
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "80"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  db:
+    container_name: nuttyverse-db
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASS}
+      - POSTGRES_DB=${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    container_name: nuttyverse-api
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000"
+    volumes:
+      - ./api:/api
+      - rust_cache:/usr/local/cargo/registry
+    environment:
+      - RUST_LOG=debug
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  app:
+    container_name: nuttyverse-app
+    platform: linux/amd64
+    build:
+      context: ./app
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000"
+    volumes:
+      - ./app:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
+  rust_cache:
+  postgres_data:
