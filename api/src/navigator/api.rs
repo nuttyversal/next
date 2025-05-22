@@ -176,23 +176,17 @@ async fn logout_handler(
 	}
 }
 
-/// Response payload for the current navigator's profile.
-#[derive(serde::Serialize)]
-pub struct MeResponse {
-	navigator: Navigator,
-}
-
 /// An API handler for getting the current navigator's profile.
 async fn me_handler(
 	State(_state): State<Arc<AppState>>,
 	Session { navigator, .. }: Session,
-) -> Json<Response<MeResponse>> {
+) -> Json<Response<Navigator>> {
 	// The Session extractor ensures this endpoint is only accessible
 	// to authenticated users. If the session is invalid or expired,
 	// the request will be rejected before reaching this handler.
 
 	Json(Response::Single {
-		data: Some(MeResponse { navigator }),
+		data: Some(navigator),
 	})
 }
 
