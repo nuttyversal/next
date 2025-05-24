@@ -24,10 +24,16 @@ class AuthenticationApi {
 		return Effect.tryPromise(async () => {
 			const response = await fetch(endpoint, {
 				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
 				body: JSON.stringify(request),
+				credentials: "include",
 			});
 
-			return Schema.decodeUnknownSync(RegisterResponse)(response.json());
+			const responseJson = await response.json();
+
+			return Schema.decodeUnknownSync(RegisterResponse)(responseJson);
 		});
 	}
 
@@ -40,10 +46,16 @@ class AuthenticationApi {
 		return Effect.tryPromise(async () => {
 			const response = await fetch(endpoint, {
 				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
 				body: JSON.stringify(request),
+				credentials: "include",
 			});
 
-			return Schema.decodeUnknownSync(LoginResponse)(response.json());
+			const responseJson = await response.json();
+
+			return Schema.decodeUnknownSync(LoginResponse)(responseJson);
 		});
 	}
 
@@ -56,6 +68,7 @@ class AuthenticationApi {
 		return Effect.tryPromise(async () => {
 			await fetch(endpoint, {
 				method: "POST",
+				credentials: "include",
 			});
 		});
 	}
@@ -69,9 +82,12 @@ class AuthenticationApi {
 		return Effect.tryPromise(async () => {
 			const response = await fetch(endpoint, {
 				method: "GET",
+				credentials: "include",
 			});
 
-			return Schema.decodeUnknownSync(MeResponse)(response.json());
+			const responseJson = await response.json();
+
+			return Schema.decodeUnknownSync(MeResponse)(responseJson);
 		});
 	}
 }

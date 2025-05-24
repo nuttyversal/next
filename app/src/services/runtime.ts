@@ -16,8 +16,13 @@ const NuttyverseLocalRuntime: NuttyverseRuntime = ManagedRuntime.make(
 	pipe(AuthenticationLive, Layer.provideMerge(ConfigurationLocal)),
 );
 
+const NuttyverseTestRuntime: NuttyverseRuntime = ManagedRuntime.make(
+	pipe(AuthenticationLive, Layer.provideMerge(ConfigurationLocal)),
+);
+
 export {
 	NuttyverseLiveRuntime,
 	NuttyverseLocalRuntime,
 	type NuttyverseRuntime,
+	NuttyverseTestRuntime,
 };

@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"strict": true,
-		"baseUrl": "src",
+		"baseUrl": ".",
 		"target": "esnext",
 		"module": "esnext",
 		"moduleResolution": "nodenext",
@@ -25,7 +25,8 @@
 			"./vitest.setup.ts"
 		],
 		"paths": {
-			"~/*": ["*"]
+			"~/test/*": ["./test/*"],
+			"~/*": ["./src/*"]
 		},
 		"plugins": [
 			{

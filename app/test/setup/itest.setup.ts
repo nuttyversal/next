@@ -8,7 +8,11 @@ const execAsync = promisify(exec);
  * This runs once before all integration tests.
  */
 export async function setup() {
-	console.log("Setting up integration test environment…\n");
+	console.log("Setting up integration test environment…");
+
+	// A self-signed certificate is being used for local.nuttyver.se.
+	console.log("Disabling TLS certificate verification…\n");
+	process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 }
 
 /**
