@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"test": "pnpm utest && pnpm itest && tsx scripts/coverage.ts",
-		"utest": "vitest run --coverage --reporter=verbose --config vitest.config.ts",
+		"utest": "vitest run --coverage --reporter=verbose --config vitest.utest.config.ts",
 		"itest": "vitest run --coverage --reporter=verbose --config vitest.itest.config.ts",
 		"start": "vite",
 		"dev": "vite",

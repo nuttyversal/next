@@ -2,16 +2,17 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
+		testTimeout: 5000,
 		environment: "node",
 		globals: true,
 		globalSetup: ["./test/setup/itest.setup.ts"],
 		setupFiles: "./test/setup/vitest.setup.ts",
 		include: ["**/*.itest.ts"],
-		testTimeout: 5000,
 		coverage: {
 			provider: "istanbul",
 			reportsDirectory: "./coverage/itest",
 			reporter: ["json", "html"],
+			include: ["src/**"],
 		},
 		alias: {
 			"~/test/": new URL("./test/", import.meta.url).pathname,
