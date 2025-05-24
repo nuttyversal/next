@@ -21,9 +21,6 @@
 			"@testing-library/jest-dom",
 			"@vitest/browser/providers/playwright"
 		],
-		"include": [
-			"./vitest.setup.ts"
-		],
 		"paths": {
 			"~/test/*": ["./test/*"],
 			"~/*": ["./src/*"]
@@ -36,5 +33,5 @@
 				"completions": true
 			}
 		]
-	}
+	},
 }

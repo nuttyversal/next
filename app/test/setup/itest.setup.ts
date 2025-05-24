@@ -24,7 +24,6 @@ export async function teardown() {
 
 	try {
 		// E.g., await execAsync("npm run db:cleanup:test");
-		console.log("Test cleanup completed!");
 	} catch (error) {
 		console.warn("Cleanup warning:", error);
 	}

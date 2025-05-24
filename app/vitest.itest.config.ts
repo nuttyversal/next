@@ -8,13 +8,15 @@ export default defineConfig({
 		setupFiles: "./test/setup/vitest.setup.ts",
 		include: ["**/*.itest.ts"],
 		testTimeout: 5000,
-
-		// Path alias mappings.
+		coverage: {
+			provider: "istanbul",
+			reportsDirectory: "./coverage/itest",
+			reporter: ["json", "html"],
+		},
 		alias: {
 			"~/test/": new URL("./test/", import.meta.url).pathname,
 			"~/": new URL("./src/", import.meta.url).pathname,
 		},
-
 		// Run integration tests sequentially to avoid
 		// race conditions between shared resources.
 		pool: "forks",
