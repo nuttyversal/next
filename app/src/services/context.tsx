@@ -62,9 +62,7 @@ const useRuntime = () => {
 		throw new Error("Runtime context is not available.");
 	}
 
-	return {
-		NuttyverseRuntime: runtime.NuttyverseRuntime,
-	};
+	return runtime.NuttyverseRuntime;
 };
 
 export {
