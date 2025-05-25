@@ -1,15 +1,17 @@
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Either, Layer } from "effect";
 import { UnknownException } from "effect/Cause";
+
+import { Response } from "~/models/api.ts";
 
 import { ConfigurationService } from "../configuration/index.ts";
 import { AuthenticationApi } from "./api.ts";
 import {
 	LoginRequest,
-	LoginResponse,
 	MeResponse,
 	RegisterRequest,
 	RegisterResponse,
 } from "./schema.ts";
+import { setAuthenticationStore } from "./store.ts";
 
 class AuthenticationService extends Context.Tag("AuthenticationService")<
 	AuthenticationService,
@@ -26,7 +28,7 @@ class AuthenticationService extends Context.Tag("AuthenticationService")<
 		 */
 		readonly login: (
 			request: LoginRequest,
-		) => Effect.Effect<LoginResponse, UnknownException>;
+		) => Effect.Effect<void, UnknownException>;
 
 		/**
 		 * Logout a navigator.
@@ -53,7 +55,39 @@ const AuthenticationLive = Layer.effect(
 		});
 
 		const login = Effect.fn(function* (request: LoginRequest) {
-			return yield* new AuthenticationApi(config.apiBaseUrl).login(request);
+			setAuthenticationStore("isLoggingIn", true);
+
+			const loginResult = yield* Effect.either(
+				new AuthenticationApi(config.apiBaseUrl).login(request),
+			);
+
+			Either.match(loginResult, {
+				onLeft: () => {
+					setAuthenticationStore({
+						isLoggingIn: false,
+						errors: [],
+					});
+				},
+
+				onRight: (response) => {
+					return Response.match(response, {
+						onError: (errors) => {
+							setAuthenticationStore({
+								isLoggingIn: false,
+								errors,
+							});
+						},
+
+						onData: (data) => {
+							setAuthenticationStore({
+								isLoggingIn: false,
+								loggedInNavigator: data?.navigator ?? null,
+								errors: [],
+							});
+						},
+					});
+				},
+			});
 		});
 
 		const logout = new AuthenticationApi(config.apiBaseUrl).logout();
