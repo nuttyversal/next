@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { SingleResponse } from "~/models/api.ts";
+import { SingleOrErrorResponse } from "~/models/api.ts";
 import { NavigatorFromApi, NavigatorName } from "~/models/navigator.ts";
 import { SessionFromApi } from "~/models/session.ts";
 
@@ -17,7 +17,7 @@ type RegisterRequest = typeof RegisterRequest.Type;
 /**
  * Register response model containing the navigator that was just created.
  */
-const RegisterResponse = SingleResponse(NavigatorFromApi);
+const RegisterResponse = SingleOrErrorResponse(NavigatorFromApi);
 
 type RegisterResponse = typeof RegisterResponse.Type;
 
@@ -34,7 +34,7 @@ type LoginRequest = typeof LoginRequest.Type;
 /**
  * Login response model containing both navigator and session.
  */
-const LoginResponse = SingleResponse(
+const LoginResponse = SingleOrErrorResponse(
 	Schema.Struct({
 		navigator: NavigatorFromApi,
 		session: SessionFromApi,
@@ -46,7 +46,7 @@ type LoginResponse = typeof LoginResponse.Type;
 /**
  * "Me" response model containing the navigator that is currently logged in.
  */
-const MeResponse = SingleResponse(NavigatorFromApi);
+const MeResponse = SingleOrErrorResponse(NavigatorFromApi);
 
 type MeResponse = typeof RegisterResponse.Type;
 
