@@ -1,11 +1,11 @@
 import { createStore } from "solid-js/store";
 
-import { ApiError } from "~/models/api.ts";
 import { Navigator } from "~/models/navigator.ts";
+import { PrettyError } from "~/models/pretty-error.ts";
 
 const [authenticationStore, setAuthenticationStore] = createStore({
 	navigator: null as Navigator | null,
-	errors: [] as readonly ApiError[],
+	error: null as PrettyError | null,
 	isLoading: false,
 });
 
