@@ -27,6 +27,7 @@ const NavigatorPass = () => {
 							setName("");
 							setPass("");
 						}),
+						Effect.ignore,
 					);
 			}),
 		);
