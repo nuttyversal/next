@@ -1,11 +1,13 @@
 import { Route, Router } from "@solidjs/router";
 
-import Singularity from "./Singularity/index.ts";
+import { NavigatorPass } from "./NavigatorPass/index.ts";
+import { Singularity } from "./Singularity/index.ts";
 
 const NuttyverseRouter = () => {
 	return (
 		<Router>
-			<Route path="/" component={Singularity} />
+			<Route path="/navpass" component={NavigatorPass} />
+			<Route path="/snglrty" component={Singularity} />
 		</Router>
 	);
 };
