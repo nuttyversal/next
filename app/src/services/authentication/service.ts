@@ -23,6 +23,12 @@ class AuthenticationService extends Context.Tag("AuthenticationService")<
 	AuthenticationService,
 	{
 		/**
+		 * Check if a navigator is currently logged in. If they are, then update
+		 * the authentication store with the navigator information.
+		 */
+		readonly initialize: Effect.Effect<void, RequestError | ParseError>;
+
+		/**
 		 * Register a navigator.
 		 */
 		readonly register: (
@@ -42,7 +48,7 @@ class AuthenticationService extends Context.Tag("AuthenticationService")<
 		readonly logout: Effect.Effect<void, RequestError>;
 
 		/**
-		 * Gets information about the logged-in navigator.
+		 * Gets information about the logged in navigator.
 		 */
 		readonly me: Effect.Effect<MeResponse, RequestError | ParseError>;
 	}
@@ -54,6 +60,20 @@ const AuthenticationLive = Layer.effect(
 		const configService = yield* ConfigurationService;
 		const config = yield* configService.getConfiguration;
 		const authenticationApi = new AuthenticationApi(config.apiBaseUrl);
+
+		const initialize = Effect.gen(function* () {
+			const response = yield* authenticationApi.me();
+
+			Response.match(response, {
+				onData: (navigator) => {
+					setAuthenticationStore("navigator", navigator);
+				},
+
+				onError: () => {
+					// Not logged in, but that's OK!
+				},
+			});
+		});
 
 		const register = Effect.fn(function* (request: RegisterRequest) {
 			return yield* authenticationApi.register(request);
@@ -121,7 +141,7 @@ const AuthenticationLive = Layer.effect(
 
 		const me = authenticationApi.me();
 
-		return { register, login, logout, me };
+		return { initialize, register, login, logout, me };
 	}),
 );
 

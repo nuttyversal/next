@@ -5,10 +5,12 @@ import { render } from "solid-js/web";
 
 import { NuttyverseRouter } from "~/pages/router.tsx";
 
+import { AuthenticationService } from "./services/authentication/index.ts";
 import {
 	RuntimeLiveProvider,
 	RuntimeLocalProvider,
 } from "./services/context.tsx";
+import { NuttyverseLocalRuntime } from "./services/runtime.ts";
 
 /**
  * An effect that queries the root element of the application.
@@ -103,14 +105,16 @@ const renderApplication = (root: HTMLElement) => {
 const main = Effect.gen(function* () {
 	const root = yield* getRootElement;
 	const loading = yield* getLoadingElement;
+	const authService = yield* AuthenticationService;
 
+	yield* authService.initialize;
 	yield* renderApplication(root);
 	yield* hideLoadingState(loading);
 });
 
 // Run the main effect and log any errors to the console.
 if (import.meta.env.MODE !== "test") {
-	Effect.runPromise(main.pipe(Effect.scoped))
+	NuttyverseLocalRuntime.runPromise(main)
 		.then(() => console.log("Application started successfully!"))
 		.catch((error) => console.error("Application failed to start:", error));
 }
