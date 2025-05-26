@@ -26,9 +26,7 @@ class AuthenticationService extends Context.Tag("AuthenticationService")<
 		/**
 		 * Login a navigator.
 		 */
-		readonly login: (
-			request: LoginRequest,
-		) => Effect.Effect<void, RequestError | ParseError>;
+		readonly login: (request: LoginRequest) => Effect.Effect<void>;
 
 		/**
 		 * Logout a navigator.
@@ -47,15 +45,26 @@ const AuthenticationLive = Layer.effect(
 	Effect.gen(function* () {
 		const configService = yield* ConfigurationService;
 		const config = yield* configService.getConfiguration;
-		const authApi = new AuthenticationApi(config.apiBaseUrl);
+		const authenticationApi = new AuthenticationApi(config.apiBaseUrl);
 
 		const register = Effect.fn(function* (request: RegisterRequest) {
-			return yield* authApi.register(request);
+			return yield* authenticationApi.register(request);
 		});
 
 		const login = Effect.fn(function* (request: LoginRequest) {
 			setAuthenticationStore("isLoading", true);
-			const response = yield* authApi.login(request);
+
+			const response = yield* Effect.catchAll(
+				authenticationApi.login(request),
+				() => {
+					setAuthenticationStore({
+						isLoading: false,
+						errors: [],
+					});
+
+					return Effect.never;
+				},
+			);
 
 			return Response.match(response, {
 				onError: (errors) => {
@@ -77,7 +86,7 @@ const AuthenticationLive = Layer.effect(
 
 		const logout = Effect.gen(function* () {
 			setAuthenticationStore("isLoading", true);
-			yield* authApi.logout();
+			yield* authenticationApi.logout();
 
 			setAuthenticationStore({
 				navigator: null,
@@ -85,7 +94,7 @@ const AuthenticationLive = Layer.effect(
 			});
 		});
 
-		const me = authApi.me();
+		const me = authenticationApi.me();
 
 		return { register, login, logout, me };
 	}),
