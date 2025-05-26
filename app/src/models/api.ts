@@ -1,11 +1,9 @@
-import { Schema } from "effect";
+import { Data, Schema } from "effect";
 
 /**
  * An error that is thrown when an API request fails.
  */
-class RequestError extends Error {
-	readonly _tag = "RequestError";
-}
+class RequestError extends Data.TaggedError("RequestError") {}
 
 /**
  * An API error object.
