@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@source "../**.*.{js,jsx,ts,tsx}";
+
 @theme {
 	--font-mono: Iosevka;
 	--font-sans: "Concourse OT";
