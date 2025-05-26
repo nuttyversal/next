@@ -1,7 +1,7 @@
-import { Context, Effect, Either, Layer } from "effect";
-import { UnknownException } from "effect/Cause";
+import { Context, Effect, Layer } from "effect";
+import { ParseError } from "effect/ParseResult";
 
-import { Response } from "~/models/api.ts";
+import { RequestError, Response } from "~/models/api.ts";
 
 import { ConfigurationService } from "../configuration/index.ts";
 import { AuthenticationApi } from "./api.ts";
@@ -21,24 +21,24 @@ class AuthenticationService extends Context.Tag("AuthenticationService")<
 		 */
 		readonly register: (
 			request: RegisterRequest,
-		) => Effect.Effect<RegisterResponse, UnknownException>;
+		) => Effect.Effect<RegisterResponse, RequestError | ParseError>;
 
 		/**
 		 * Login a navigator.
 		 */
 		readonly login: (
 			request: LoginRequest,
-		) => Effect.Effect<void, UnknownException>;
+		) => Effect.Effect<void, RequestError | ParseError>;
 
 		/**
 		 * Logout a navigator.
 		 */
-		readonly logout: Effect.Effect<void, UnknownException>;
+		readonly logout: Effect.Effect<void, RequestError>;
 
 		/**
 		 * Gets information about the logged-in navigator.
 		 */
-		readonly me: Effect.Effect<MeResponse, UnknownException>;
+		readonly me: Effect.Effect<MeResponse, RequestError | ParseError>;
 	}
 >() {}
 
@@ -47,52 +47,45 @@ const AuthenticationLive = Layer.effect(
 	Effect.gen(function* () {
 		const configService = yield* ConfigurationService;
 		const config = yield* configService.getConfiguration;
+		const authApi = new AuthenticationApi(config.apiBaseUrl);
 
 		const register = Effect.fn(function* (request: RegisterRequest) {
-			return yield* new AuthenticationApi(config.apiBaseUrl).register(
-				request,
-			);
+			return yield* authApi.register(request);
 		});
 
 		const login = Effect.fn(function* (request: LoginRequest) {
-			setAuthenticationStore("isLoggingIn", true);
+			setAuthenticationStore("isLoading", true);
+			const response = yield* authApi.login(request);
 
-			const loginResult = yield* Effect.either(
-				new AuthenticationApi(config.apiBaseUrl).login(request),
-			);
-
-			Either.match(loginResult, {
-				onLeft: () => {
+			return Response.match(response, {
+				onError: (errors) => {
 					setAuthenticationStore({
-						isLoggingIn: false,
-						errors: [],
+						isLoading: false,
+						errors,
 					});
 				},
 
-				onRight: (response) => {
-					return Response.match(response, {
-						onError: (errors) => {
-							setAuthenticationStore({
-								isLoggingIn: false,
-								errors,
-							});
-						},
-
-						onData: (data) => {
-							setAuthenticationStore({
-								isLoggingIn: false,
-								loggedInNavigator: data?.navigator ?? null,
-								errors: [],
-							});
-						},
+				onData: (data) => {
+					setAuthenticationStore({
+						navigator: data?.navigator ?? null,
+						isLoading: false,
+						errors: [],
 					});
 				},
 			});
 		});
 
-		const logout = new AuthenticationApi(config.apiBaseUrl).logout();
+		const logout = Effect.gen(function* () {
+			setAuthenticationStore("isLoading", true);
+			yield* authApi.logout();
 
-		const me = new AuthenticationApi(config.apiBaseUrl).me();
+			setAuthenticationStore({
+				navigator: null,
+				isLoading: false,
+			});
+		});
+
+		const me = authApi.me();
 
 		return { register, login, logout, me };
 	}),

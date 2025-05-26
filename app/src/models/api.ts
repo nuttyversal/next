@@ -1,6 +1,13 @@
 import { Schema } from "effect";
 
 /**
+ * An error that is thrown when an API request fails.
+ */
+class RequestError extends Error {
+	readonly _tag = "RequestError";
+}
+
+/**
  * An API error object.
  */
 const ApiError = Schema.Struct({
@@ -116,6 +123,7 @@ export {
 	ErrorResponse,
 	MultipleOrErrorResponse,
 	MultipleResponse,
+	RequestError,
 	Response,
 	SingleOrErrorResponse,
 	SingleResponse,

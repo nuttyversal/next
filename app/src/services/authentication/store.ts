@@ -4,9 +4,9 @@ import { ApiError } from "~/models/api.ts";
 import { Navigator } from "~/models/navigator.ts";
 
 const [authenticationStore, setAuthenticationStore] = createStore({
-	loggedInNavigator: null as Navigator | null,
-	isLoggingIn: false,
+	navigator: null as Navigator | null,
 	errors: [] as readonly ApiError[],
+	isLoading: false,
 });
 
 export { authenticationStore, setAuthenticationStore };

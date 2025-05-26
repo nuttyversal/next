@@ -1,5 +1,7 @@
 import { Effect, Schema } from "effect";
 
+import { RequestError } from "~/models/api.ts";
+
 import {
 	LoginRequest,
 	LoginResponse,
@@ -21,20 +23,29 @@ class AuthenticationApi {
 	register(request: RegisterRequest) {
 		const endpoint = `${this.baseApiUrl}/navigator`;
 
-		return Effect.tryPromise(async () => {
-			const response = await fetch(endpoint, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(request),
-				credentials: "include",
-			});
+		const makeRequest = Effect.tryPromise({
+			try: async () => {
+				const response = await fetch(endpoint, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(request),
+					credentials: "include",
+				});
 
-			const responseJson = await response.json();
+				return await response.json();
+			},
 
-			return Schema.decodeUnknownSync(RegisterResponse)(responseJson);
+			catch: () => {
+				return new RequestError();
+			},
 		});
+
+		return Effect.andThen(
+			makeRequest,
+			Schema.decodeUnknown(RegisterResponse),
+		);
 	}
 
 	/**
@@ -43,20 +54,26 @@ class AuthenticationApi {
 	login(request: LoginRequest) {
 		const endpoint = `${this.baseApiUrl}/navigator/login`;
 
-		return Effect.tryPromise(async () => {
-			const response = await fetch(endpoint, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(request),
-				credentials: "include",
-			});
+		const makeRequest = Effect.tryPromise({
+			try: async () => {
+				const response = await fetch(endpoint, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(request),
+					credentials: "include",
+				});
 
-			const responseJson = await response.json();
+				return await response.json();
+			},
 
-			return Schema.decodeUnknownSync(LoginResponse)(responseJson);
+			catch: () => {
+				return new RequestError();
+			},
 		});
+
+		return Effect.andThen(makeRequest, Schema.decodeUnknown(LoginResponse));
 	}
 
 	/**
@@ -65,11 +82,19 @@ class AuthenticationApi {
 	logout() {
 		const endpoint = `${this.baseApiUrl}/navigator/logout`;
 
-		return Effect.tryPromise(async () => {
-			await fetch(endpoint, {
-				method: "POST",
-				credentials: "include",
-			});
+		return Effect.tryPromise({
+			try: async () => {
+				const response = await fetch(endpoint, {
+					method: "POST",
+					credentials: "include",
+				});
+
+				return await response.json();
+			},
+
+			catch: () => {
+				return new RequestError();
+			},
 		});
 	}
 
@@ -79,16 +104,22 @@ class AuthenticationApi {
 	me() {
 		const endpoint = `${this.baseApiUrl}/navigator/me`;
 
-		return Effect.tryPromise(async () => {
-			const response = await fetch(endpoint, {
-				method: "GET",
-				credentials: "include",
-			});
+		const makeRequest = Effect.tryPromise({
+			try: async () => {
+				const response = await fetch(endpoint, {
+					method: "GET",
+					credentials: "include",
+				});
 
-			const responseJson = await response.json();
+				return await response.json();
+			},
 
-			return Schema.decodeUnknownSync(MeResponse)(responseJson);
+			catch: () => {
+				return new RequestError();
+			},
 		});
+
+		return Effect.andThen(makeRequest, Schema.decodeUnknown(MeResponse));
 	}
 }
 
