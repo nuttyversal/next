@@ -1,4 +1,5 @@
 # dependencies
+.pnpm-store/
 node_modules/
 
 # build output
