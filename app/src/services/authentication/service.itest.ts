@@ -1,5 +1,6 @@
-import { Arbitrary, Effect, FastCheck } from "effect";
+import { Arbitrary, Effect, Either, FastCheck, Schema } from "effect";
 
+import { ErrorResponse } from "~/models/api.ts";
 import { fetchWithCookies } from "~/test/mocks/fetch.ts";
 
 import { NuttyverseTestRuntime } from "../runtime.ts";
@@ -64,15 +65,16 @@ describe("AuthenticationService", () => {
 		);
 
 		// Act: Make an unauthenticated request to a protected endpoint.
-		const tryMeAfterLoggingOut = async () => {
-			await NuttyverseTestRuntime.runPromise(
-				Effect.gen(function* () {
-					const authService = yield* AuthenticationService;
-					return yield* authService.me;
-				}),
-			);
-		};
+		const otherMeResponse = await NuttyverseTestRuntime.runPromise(
+			Effect.gen(function* () {
+				const authService = yield* AuthenticationService;
+				return yield* authService.me;
+			}),
+		);
 
-		await expect(tryMeAfterLoggingOut()).rejects.toThrow();
+		// Assert: Not OK.
+		const decodeErrorResponse = Schema.decodeUnknownEither(ErrorResponse);
+		const maybeErrorResponse = decodeErrorResponse(otherMeResponse);
+		expect(Either.isRight(maybeErrorResponse)).toBe(true);
 	});
 });

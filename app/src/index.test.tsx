@@ -3,6 +3,7 @@ import { Effect } from "effect";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { getRootElement, main } from "./index.tsx";
+import { NuttyverseTestRuntime } from "./services/runtime.ts";
 
 describe("Application startup", () => {
 	it("renders without crashing", async () => {
@@ -12,7 +13,7 @@ describe("Application startup", () => {
 			</div>
 		));
 
-		await Effect.runPromise(main.pipe(Effect.scoped));
+		await NuttyverseTestRuntime.runPromise(main);
 	});
 
 	describe("getRootElement", () => {

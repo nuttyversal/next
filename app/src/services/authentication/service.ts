@@ -8,6 +8,7 @@ import { ConfigurationService } from "../configuration/index.ts";
 import { AuthenticationApi } from "./api.ts";
 import {
 	LoginRequest,
+	LoginResponse,
 	MeResponse,
 	RegisterRequest,
 	RegisterResponse,
@@ -40,7 +41,7 @@ class AuthenticationService extends Context.Tag("AuthenticationService")<
 		 */
 		readonly login: (
 			request: LoginRequest,
-		) => Effect.Effect<void, LoginError>;
+		) => Effect.Effect<LoginResponse, LoginError>;
 
 		/**
 		 * Logout a navigator.
@@ -127,6 +128,8 @@ const AuthenticationLive = Layer.effect(
 			if ("errors" in response) {
 				yield* new LoginError();
 			}
+
+			return response;
 		});
 
 		const logout = Effect.gen(function* () {
