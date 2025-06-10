@@ -213,9 +213,11 @@ mod tests {
 	use crate::models::FractionalIndex;
 
 	async fn connect_to_test_database() -> Pool<Postgres> {
+		let database_url = std::env::var("DATABASE_URL").unwrap();
+
 		PgPoolOptions::new()
 			.max_connections(5)
-			.connect("postgres://nutty@localhost:5432/nuttyverse")
+			.connect(&database_url)
 			.await
 			.expect("Failed to connect to test database")
 	}

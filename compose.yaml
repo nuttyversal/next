@@ -49,6 +49,7 @@ services:
       - "3000"
     volumes:
       - ./api:/api
+      - /dev/null:/api/.env
       - rust_cache:/usr/local/cargo/registry
     environment:
       - RUST_LOG=debug
