@@ -104,7 +104,7 @@ impl ContentRepository {
 	{
 		Ok(sqlx::query_as(
 			r#"
-				SELECT id, parent_id, f_index, content, created_at, updated_at
+				SELECT id, owner_id, parent_id, f_index, content, created_at, updated_at
 				FROM content.blocks
 				WHERE nutty_id = $1
 			"#,
@@ -142,7 +142,7 @@ impl ContentRepository {
 					FROM content.blocks p
 					JOIN ancestors a ON p.id = a.parent_id
 				)
-				SELECT id, parent_id, f_index, content, created_at, updated_at
+				SELECT id, owner_id, parent_id, f_index, content, created_at, updated_at
 				FROM ancestors
 				WHERE level > 0
 				ORDER BY level;
@@ -181,7 +181,7 @@ impl ContentRepository {
 					FROM content.blocks c
 					JOIN descendants d ON c.parent_id = d.id
 				)
-				SELECT id, parent_id, f_index, content, created_at, updated_at
+				SELECT id, owner_id, parent_id, f_index, content, created_at, updated_at
 				FROM descendants
 				WHERE level > 0
 				ORDER BY level;
@@ -211,15 +211,16 @@ impl ContentRepository {
 	{
 		Ok(sqlx::query_as(
 			r#"
-				INSERT INTO content.blocks (id, nutty_id, parent_id, f_index, content)
-				VALUES ($1, $2, $3, $4, $5)
+				INSERT INTO content.blocks (id, nutty_id, owner_id, parent_id, f_index, content)
+				VALUES ($1, $2, $3, $4, $5, $6)
 				ON CONFLICT (id) DO UPDATE
-				SET parent_id = EXCLUDED.parent_id, content = EXCLUDED.content, f_index = EXCLUDED.f_index
-				RETURNING id, nutty_id, parent_id, f_index, content, created_at, updated_at
+				SET parent_id = EXCLUDED.parent_id, content = EXCLUDED.content, f_index = EXCLUDED.f_index, owner_id = EXCLUDED.owner_id
+				RETURNING id, nutty_id, owner_id, parent_id, f_index, content, created_at, updated_at
 			"#,
 		)
 		.bind(content_block.nutty_id().uuid())
 		.bind(content_block.nutty_id().nid())
+		.bind(content_block.owner_id().map(|id| *id.uuid()))
 		.bind(content_block.parent_id.map(|id| *id.uuid()))
 		.bind(content_block.f_index.as_str())
 		.bind(content_block.serialize_content()?)

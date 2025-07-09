@@ -15,6 +15,7 @@ use crate::models::date_time_rfc_3339::DateTimeRfc3339;
 pub struct ContentBlock {
 	#[sqlx(rename = "id")]
 	nutty_id: NuttyId,
+	pub owner_id: Option<NuttyId>,
 	pub parent_id: Option<NuttyId>,
 	pub f_index: FractionalIndex,
 	#[sqlx(json)]
@@ -27,6 +28,7 @@ impl ContentBlock {
 	/// Create a new content block.
 	fn new(
 		nutty_id: NuttyId,
+		owner_id: Option<NuttyId>,
 		parent_id: Option<NuttyId>,
 		f_index: FractionalIndex,
 		content: BlockContent,
@@ -35,6 +37,7 @@ impl ContentBlock {
 	) -> Self {
 		Self {
 			nutty_id,
+			owner_id,
 			parent_id,
 			f_index,
 			content,
@@ -55,12 +58,53 @@ impl ContentBlock {
 			.fixed_offset()
 			.into();
 
-		Self::new(NuttyId::now(), parent_id, f_index, content, now, now)
+		Self::new(NuttyId::now(), None, parent_id, f_index, content, now, now)
+	}
+
+	/// Create a new content block with an owner.
+	pub fn now_with_owner(
+		parent_id: Option<NuttyId>,
+		owner_id: NuttyId,
+		f_index: FractionalIndex,
+		content: BlockContent,
+	) -> Self {
+		let nutty_id = NuttyId::now();
+		let timestamp = nutty_id.timestamp() as i64;
+
+		let now = Local
+			.timestamp_millis_opt(timestamp)
+			.single()
+			.unwrap()
+			.fixed_offset()
+			.into();
+
+		Self::new(
+			NuttyId::now(),
+			Some(owner_id),
+			parent_id,
+			f_index,
+			content,
+			now,
+			now,
+		)
 	}
 
 	/// Get the Nutty ID.
 	pub fn nutty_id(&self) -> &NuttyId {
 		&self.nutty_id
+	}
+
+	/// Get the owner ID.
+	pub fn owner_id(&self) -> Option<&NuttyId> {
+		self.owner_id.as_ref()
+	}
+
+	/// Check if the content block is owned by the given navigator.
+	pub fn is_owned_by(&self, navigator_id: &NuttyId) -> bool {
+		self
+			.owner_id
+			.as_ref()
+			.map_or(false, |owner| owner == navigator_id)
 	}
 
 	/// Serialize content to a JSON value.
@@ -94,6 +138,7 @@ pub enum ContentBlockError {
 #[derive(Default)]
 pub struct ContentBlockBuilder {
 	nutty_id: Option<NuttyId>,
+	owner_id: Option<NuttyId>,
 	parent_id: Option<NuttyId>,
 	f_index: Option<FractionalIndex>,
 	content: Option<BlockContent>,
@@ -105,6 +150,12 @@ impl ContentBlockBuilder {
 	/// Set the Nutty ID.
 	pub fn nutty_id(mut self, nutty_id: NuttyId) -> Self {
 		self.nutty_id = Some(nutty_id);
+		self
+	}
+
+	/// Set the owner ID.
+	pub fn owner_id(mut self, owner_id: Option<NuttyId>) -> Self {
+		self.owner_id = owner_id;
 		self
 	}
 
@@ -141,6 +192,7 @@ impl ContentBlockBuilder {
 	/// Build the content block, returning an error if required fields are not set.
 	pub fn try_build(self) -> Result<ContentBlock, ContentBlockBuilderError> {
 		let parent_id = self.parent_id;
+		let owner_id = self.owner_id;
 		let f_index = self.f_index.ok_or(ContentBlockBuilderError::MissingIndex)?;
 
 		let content = self
@@ -155,12 +207,20 @@ impl ContentBlockBuilder {
 				}
 
 				Ok(ContentBlock::new(
-					nutty_id, parent_id, f_index, content, created_at, updated_at,
+					nutty_id, owner_id, parent_id, f_index, content, created_at, updated_at,
 				))
 			}
 
 			// … or with no timestamps at all. Generate them on the fly.
-			(None, None, None) => Ok(ContentBlock::now(parent_id, f_index, content)),
+			(None, None, None) => {
+				if let Some(owner_id) = owner_id {
+					Ok(ContentBlock::now_with_owner(
+						parent_id, owner_id, f_index, content,
+					))
+				} else {
+					Ok(ContentBlock::now(parent_id, f_index, content))
+				}
+			}
 
 			// But, don't create the content block with partial timestamp context.
 			(_, _, _) => Err(ContentBlockBuilderError::PartialTimestampContext),
@@ -181,4 +241,55 @@ pub enum ContentBlockBuilderError {
 
 	#[error("Missing partial timestamp context")]
 	PartialTimestampContext,
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_content_block_with_owner() {
+		let owner_id = NuttyId::now();
+		let content = BlockContent::Page {
+			title: "Test Page".to_string(),
+		};
+
+		let block = ContentBlock::now_with_owner(None, owner_id, FractionalIndex::start(), content);
+
+		assert_eq!(block.owner_id(), Some(&owner_id));
+		assert!(block.is_owned_by(&owner_id));
+
+		let different_owner = NuttyId::now();
+		assert!(!block.is_owned_by(&different_owner));
+	}
+
+	#[test]
+	fn test_content_block_without_owner() {
+		let content = BlockContent::Page {
+			title: "Test Page".to_string(),
+		};
+
+		let block = ContentBlock::now(None, FractionalIndex::start(), content);
+
+		assert_eq!(block.owner_id(), None);
+		assert!(!block.is_owned_by(&NuttyId::now()));
+	}
+
+	#[test]
+	fn test_content_block_builder_with_owner() {
+		let owner_id = NuttyId::now();
+		let content = BlockContent::Page {
+			title: "Test Page".to_string(),
+		};
+
+		let block = ContentBlock::builder()
+			.f_index(FractionalIndex::start())
+			.content(content)
+			.owner_id(Some(owner_id))
+			.try_build()
+			.expect("Failed to build content block");
+
+		assert_eq!(block.owner_id(), Some(&owner_id));
+		assert!(block.is_owned_by(&owner_id));
+	}
 }
