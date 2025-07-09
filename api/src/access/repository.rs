@@ -20,9 +20,9 @@ impl AccessRepository {
 
 	/// Check if a navigator has a specific permission through the three-tier system:
 	///
-	/// - Global roles (e.g., "content_blocks:write:all").
-	/// - Resource-specific roles (e.g., "content_blocks:write" on #123).
-	/// - Ownership permissions (e.g., "content_blocks:write:own" if navigator owns #123).
+	/// - Ownership permissions (e.g., has "content_blocks:write:own" and owns #123).
+	/// - Resource-specific roles (e.g., has "content_blocks:write" on #123).
+	/// - Global roles (e.g., has "content_blocks:write:all").
 	pub async fn check_permission(
 		&self,
 		check: &PermissionCheck,
@@ -32,35 +32,40 @@ impl AccessRepository {
 			None => return Ok(PermissionResult::Denied),
 		};
 
-		// Tier 1: Check global roles.
-		if self
-			.has_global_permission(navigator_id, check.permission())
-			.await?
-		{
-			return Ok(PermissionResult::GrantedGlobal);
-		}
+		let permission = check.permission();
 
-		// Tier 2: Check resource-specific roles.
-		if let (Some(resource_type), Some(resource_id)) = (check.resource_type(), check.resource_id())
-		{
-			if self
-				.has_resource_permission(navigator_id, check.permission(), resource_type, resource_id)
-				.await?
+		// Special handling for ":own" permissions: must be owner to get permission.
+		if permission.ends_with(":own") {
+			if let (Some(resource_type), Some(resource_id)) =
+				(check.resource_type(), check.resource_id())
 			{
-				return Ok(PermissionResult::GrantedResource);
+				if self
+					.is_owner(navigator_id, resource_type, resource_id)
+					.await?
+				{
+					if self.has_global_permission(navigator_id, permission).await? {
+						return Ok(PermissionResult::GrantedOwnership);
+					}
+				} else {
+					// Not the owner: do not grant, even if they have the global ":own" permission.
+					return Ok(PermissionResult::Denied);
+				}
 			}
 		}
 
-		// Tier 3: Check ownership permissions.
+		// Check global roles (for non-:own permissions).
+		if self.has_global_permission(navigator_id, permission).await? {
+			return Ok(PermissionResult::GrantedGlobal);
+		}
+
+		// Check resource-specific roles.
 		if let (Some(resource_type), Some(resource_id)) = (check.resource_type(), check.resource_id())
 		{
 			if self
-				.is_owner(navigator_id, resource_type, resource_id)
-				.await? && self
-				.has_ownership_permission(navigator_id, check.permission())
+				.has_resource_permission(navigator_id, permission, resource_type, resource_id)
 				.await?
 			{
-				return Ok(PermissionResult::GrantedOwnership);
+				return Ok(PermissionResult::GrantedResource);
 			}
 		}
 
@@ -123,25 +128,30 @@ impl AccessRepository {
 	/// Check if a navigator owns a resource.
 	async fn is_owner(
 		&self,
-		_navigator_id: &NuttyId,
-		_resource_type: &str,
-		_resource_id: &NuttyId,
-	) -> Result<bool, AccessRepositoryError> {
-		// TODO: Implement the is_owner method.
-		Ok(false)
-	}
-
-	/// Check if a navigator has ownership permission.
-	async fn has_ownership_permission(
-		&self,
 		navigator_id: &NuttyId,
-		permission: &str,
+		resource_type: &str,
+		resource_id: &NuttyId,
 	) -> Result<bool, AccessRepositoryError> {
-		if permission.ends_with(":own") {
-			self.has_global_permission(navigator_id, permission).await
-		} else {
-			Ok(false)
+		if resource_type == "content_block" {
+			let result = sqlx::query!(
+				r#"
+					SELECT owner_id
+					FROM content.blocks
+					WHERE id = $1
+				"#,
+				resource_id.uuid()
+			)
+			.fetch_optional(&self.pool)
+			.await?;
+
+			if let Some(row) = result {
+				if let Some(owner_id) = row.owner_id {
+					return Ok(owner_id == *navigator_id.uuid());
+				}
+			}
 		}
+
+		Ok(false)
 	}
 
 	/// Get all permissions for a navigator.
@@ -539,6 +549,20 @@ mod tests {
 		let repo = AccessRepository::new(pool.clone());
 		let (alice_id, bob_id, charlie_id, resource_id) = setup_test_data(&pool).await;
 
+		// Create a content block owned by Alice.
+		sqlx::query!(
+			r#"
+				INSERT INTO content.blocks (id, nutty_id, owner_id, parent_id, f_index, content, created_at, updated_at)
+				VALUES ($1, $2, $3, NULL, '0', '{"kind": "Page", "title": "Test Page"}', NOW(), NOW())
+			"#,
+			resource_id.uuid(),
+			resource_id.nid(),
+			alice_id.uuid()
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to create test content block");
+
 		// Assign ownership permission to Alice.
 		repo
 			.assign_global_role(&alice_id, "block_owner")
@@ -559,11 +583,8 @@ mod tests {
 			.expect("Failed to check permission");
 
 		// Alice has the `block_owner` role which gives her `content_blocks:write:own`
-		// permission globally. Since `is_owner` currently returns false, she gets
-		// `GrantedGlobal` instead of `GrantedOwnership.`
-		//
-		// TODO: Update this assertion after implementing the is_owner method.
-		assert_eq!(result, PermissionResult::GrantedGlobal);
+		// permission globally. She should get `GrantedOwnership` if she is the owner.
+		assert_eq!(result, PermissionResult::GrantedOwnership);
 
 		// Cleanup.
 		cleanup_test_data(&pool, &[alice_id, bob_id, charlie_id]).await;
