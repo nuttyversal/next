@@ -18,10 +18,9 @@ impl AccessService {
 		}
 	}
 
-	/// Check if a navigator has permission to perform an action.
+	/// Check if a navigator has a permission.
 	pub async fn can(&self, check: &PermissionCheck) -> Result<bool, AccessServiceError> {
-		let result = self.repository.check_permission(check).await?;
-
+		let result = self.check(check).await?;
 		Ok(matches!(
 			result,
 			PermissionResult::GrantedGlobal
@@ -30,7 +29,7 @@ impl AccessService {
 		))
 	}
 
-	/// Check permission and return detailed result.
+	/// Get detailed permission check result.
 	pub async fn check(
 		&self,
 		check: &PermissionCheck,
@@ -42,15 +41,13 @@ impl AccessService {
 			.map_err(AccessServiceError::Repository)
 	}
 
-	/// Require permission - returns error if not granted.
+	/// Require a permission (returns error if not granted).
 	pub async fn require(&self, check: &PermissionCheck) -> Result<(), AccessServiceError> {
 		let result = self.check(check).await?;
-
 		match result {
 			PermissionResult::GrantedGlobal
 			| PermissionResult::GrantedResource
 			| PermissionResult::GrantedOwnership => Ok(()),
-
 			PermissionResult::Denied => Err(AccessServiceError::PermissionDenied {
 				navigator_id: check.navigator_id().map(|id| id.to_string()),
 				permission: check.permission().to_string(),
@@ -59,6 +56,72 @@ impl AccessService {
 					.map(|t| format!("{}:{}", t, check.resource_id().unwrap())),
 			}),
 		}
+	}
+
+	/// Check if a navigator has a permission (convenience method).
+	pub async fn can_permission(
+		&self,
+		navigator_id: &NuttyId,
+		permission: &str,
+	) -> Result<bool, AccessServiceError> {
+		let check = PermissionCheck::builder()
+			.navigator(*navigator_id)
+			.permission(permission.to_string())
+			.try_build()
+			.map_err(AccessServiceError::from)?;
+
+		self.can(&check).await
+	}
+
+	/// Check if a navigator has a permission on a specific resource (convenience method).
+	pub async fn can_on_resource(
+		&self,
+		navigator_id: &NuttyId,
+		permission: &str,
+		resource_type: &str,
+		resource_id: &NuttyId,
+	) -> Result<bool, AccessServiceError> {
+		let check = PermissionCheck::builder()
+			.navigator(*navigator_id)
+			.permission(permission.to_string())
+			.resource(resource_type.to_string(), *resource_id)
+			.try_build()
+			.map_err(AccessServiceError::from)?;
+
+		self.can(&check).await
+	}
+
+	/// Require a permission (convenience method).
+	pub async fn require_permission(
+		&self,
+		navigator_id: &NuttyId,
+		permission: &str,
+	) -> Result<(), AccessServiceError> {
+		let check = PermissionCheck::builder()
+			.navigator(*navigator_id)
+			.permission(permission.to_string())
+			.try_build()
+			.map_err(AccessServiceError::from)?;
+
+		self.require(&check).await
+	}
+
+	/// Require a permission on a specific resource (convenience method).
+	pub async fn require_on_resource(
+		&self,
+		navigator_id: &NuttyId,
+		permission: &str,
+		resource_type: &str,
+		resource_id: &NuttyId,
+	) -> Result<(), AccessServiceError> {
+		let check = PermissionCheck::builder()
+			.navigator(*navigator_id)
+			.permission(permission.to_string())
+			.resource(resource_type.to_string(), *resource_id)
+			.try_build()
+			.map_err(AccessServiceError::from)?;
+
+		self.require(&check).await
 	}
 
 	/// Grant a global role to a navigator.
@@ -146,105 +209,6 @@ pub enum AccessServiceError {
 	},
 }
 
-/// Extension trait for easy permission checking in other parts of the system.
-pub trait AccessExt {
-	/// Check if the navigator can perform an action.
-	fn can(
-		&self,
-		navigator_id: &NuttyId,
-		permission: &str,
-	) -> impl Future<Output = Result<bool, AccessServiceError>> + Send;
-
-	/// Check if the navigator can perform an action on a specific resource.
-	fn can_on(
-		&self,
-		navigator_id: &NuttyId,
-		permission: &str,
-		resource_type: &str,
-		resource_id: &NuttyId,
-	) -> impl Future<Output = Result<bool, AccessServiceError>> + Send;
-
-	/// Require permission for an action.
-	fn require(
-		&self,
-		navigator_id: &NuttyId,
-		permission: &str,
-	) -> impl Future<Output = Result<(), AccessServiceError>> + Send;
-
-	/// Require permission for an action on a specific resource.
-	fn require_on(
-		&self,
-		navigator_id: &NuttyId,
-		permission: &str,
-		resource_type: &str,
-		resource_id: &NuttyId,
-	) -> impl Future<Output = Result<(), AccessServiceError>> + Send;
-}
-
-impl AccessExt for AccessService {
-	async fn can(
-		&self,
-		navigator_id: &NuttyId,
-		permission: &str,
-	) -> Result<bool, AccessServiceError> {
-		let check = PermissionCheck::builder()
-			.navigator(*navigator_id)
-			.permission(permission.to_string())
-			.try_build()
-			.map_err(AccessServiceError::from)?;
-
-		self.can(&check).await
-	}
-
-	async fn can_on(
-		&self,
-		navigator_id: &NuttyId,
-		permission: &str,
-		resource_type: &str,
-		resource_id: &NuttyId,
-	) -> Result<bool, AccessServiceError> {
-		let check = PermissionCheck::builder()
-			.navigator(*navigator_id)
-			.permission(permission.to_string())
-			.resource(resource_type.to_string(), *resource_id)
-			.try_build()
-			.map_err(AccessServiceError::from)?;
-
-		self.can(&check).await
-	}
-
-	async fn require(
-		&self,
-		navigator_id: &NuttyId,
-		permission: &str,
-	) -> Result<(), AccessServiceError> {
-		let check = PermissionCheck::builder()
-			.navigator(*navigator_id)
-			.permission(permission.to_string())
-			.try_build()
-			.map_err(AccessServiceError::from)?;
-
-		self.require(&check).await
-	}
-
-	async fn require_on(
-		&self,
-		navigator_id: &NuttyId,
-		permission: &str,
-		resource_type: &str,
-		resource_id: &NuttyId,
-	) -> Result<(), AccessServiceError> {
-		let check = PermissionCheck::builder()
-			.navigator(*navigator_id)
-			.permission(permission.to_string())
-			.resource(resource_type.to_string(), *resource_id)
-			.try_build()
-			.map_err(AccessServiceError::from)?;
-
-		self.require(&check).await
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use sqlx::PgPool;
@@ -299,7 +263,7 @@ mod tests {
 		sqlx::query!(
 			r#"
 				INSERT INTO auth.permissions (name, description)
-				VALUES 
+				VALUES
 					('content_blocks:read:all', 'Read all content blocks'),
 					('content_blocks:write:all', 'Write all content blocks'),
 					('content_blocks:write:own', 'Write own content blocks'),
@@ -315,7 +279,7 @@ mod tests {
 		sqlx::query!(
 			r#"
 				INSERT INTO auth.roles (name, description)
-				VALUES 
+				VALUES
 					('admin', 'Administrator role'),
 					('editor', 'Editor role'),
 					('viewer', 'Viewer role'),
@@ -331,7 +295,7 @@ mod tests {
 		sqlx::query!(
 			r#"
 				INSERT INTO auth.role_permissions (role_name, permission_name)
-				VALUES 
+				VALUES
 					('admin', 'content_blocks:read:all'),
 					('admin', 'content_blocks:write:all'),
 					('editor', 'content_blocks:read:all'),
@@ -764,212 +728,6 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn test_access_ext_can() {
-		let pool = connect_to_test_database().await;
-		let repo = AccessRepository::new(pool.clone());
-		let service = AccessService::new(repo);
-		let (alice_id, bob_id, charlie_id, _) = setup_test_data(&pool).await;
-
-		// Assign admin role to Alice.
-		service
-			.grant_global_role(&alice_id, "admin")
-			.await
-			.expect("Failed to assign admin role");
-
-		// Act & Assert: Test AccessExt::can method.
-		let can_read = AccessExt::can(&service, &alice_id, "content_blocks:read:all")
-			.await
-			.expect("Failed to check permission");
-
-		assert!(can_read);
-
-		// Bob has no roles.
-		let can_read = AccessExt::can(&service, &bob_id, "content_blocks:read:all")
-			.await
-			.expect("Failed to check permission");
-
-		assert!(!can_read);
-
-		// Cleanup.
-		cleanup_test_data(&pool, &[alice_id, bob_id, charlie_id]).await;
-	}
-
-	#[tokio::test]
-	async fn test_access_ext_can_on() {
-		let pool = connect_to_test_database().await;
-		let repo = AccessRepository::new(pool.clone());
-		let service = AccessService::new(repo);
-		let (alice_id, bob_id, charlie_id, resource_id) = setup_test_data(&pool).await;
-
-		// Assign resource role to Alice.
-		service
-			.grant_resource_role(&alice_id, "viewer", "content_block", &resource_id)
-			.await
-			.expect("Failed to assign resource role");
-
-		// Act & Assert: Test AccessExt::can_on method.
-		let can_read = service
-			.can_on(
-				&alice_id,
-				"content_blocks:read:resource",
-				"content_block",
-				&resource_id,
-			)
-			.await
-			.expect("Failed to check permission");
-
-		assert!(can_read);
-
-		// Bob has no resource roles.
-		let can_read = service
-			.can_on(
-				&bob_id,
-				"content_blocks:read:resource",
-				"content_block",
-				&resource_id,
-			)
-			.await
-			.expect("Failed to check permission");
-
-		assert!(!can_read);
-
-		// Cleanup.
-		cleanup_test_data(&pool, &[alice_id, bob_id, charlie_id]).await;
-	}
-
-	#[tokio::test]
-	async fn test_access_ext_require() {
-		let pool = connect_to_test_database().await;
-		let repo = AccessRepository::new(pool.clone());
-		let service = AccessService::new(repo);
-		let (alice_id, bob_id, charlie_id, _) = setup_test_data(&pool).await;
-
-		// Assign admin role to Alice.
-		service
-			.grant_global_role(&alice_id, "admin")
-			.await
-			.expect("Failed to assign admin role");
-
-		// Act & Assert: Test AccessExt::require method.
-		let result = AccessExt::require(&service, &alice_id, "content_blocks:read:all").await;
-		assert!(result.is_ok());
-
-		// Bob has no roles.
-		let result = AccessExt::require(&service, &bob_id, "content_blocks:read:all").await;
-		assert!(result.is_err());
-
-		// Cleanup.
-		cleanup_test_data(&pool, &[alice_id, bob_id, charlie_id]).await;
-	}
-
-	#[tokio::test]
-	async fn test_access_ext_require_on() {
-		let pool = connect_to_test_database().await;
-		let repo = AccessRepository::new(pool.clone());
-		let service = AccessService::new(repo);
-		let (alice_id, bob_id, charlie_id, resource_id) = setup_test_data(&pool).await;
-
-		// Assign resource role to Alice.
-		service
-			.grant_resource_role(&alice_id, "viewer", "content_block", &resource_id)
-			.await
-			.expect("Failed to assign resource role");
-
-		// Act & Assert: Test AccessExt::require_on method.
-		let result = service
-			.require_on(
-				&alice_id,
-				"content_blocks:read:resource",
-				"content_block",
-				&resource_id,
-			)
-			.await;
-
-		assert!(result.is_ok());
-
-		// Bob has no resource roles.
-		let result = service
-			.require_on(
-				&bob_id,
-				"content_blocks:read:resource",
-				"content_block",
-				&resource_id,
-			)
-			.await;
-
-		assert!(result.is_err());
-
-		// Cleanup.
-		cleanup_test_data(&pool, &[alice_id, bob_id, charlie_id]).await;
-	}
-
-	#[tokio::test]
-	async fn test_permission_hierarchy() {
-		let pool = connect_to_test_database().await;
-		let repo = AccessRepository::new(pool.clone());
-		let service = AccessService::new(repo);
-		let (alice_id, bob_id, charlie_id, resource_id) = setup_test_data(&pool).await;
-
-		// Alice has global admin role.
-		service
-			.grant_global_role(&alice_id, "admin")
-			.await
-			.expect("Failed to assign admin role");
-
-		// Bob has resource-specific role.
-		service
-			.grant_resource_role(&bob_id, "viewer", "content_block", &resource_id)
-			.await
-			.expect("Failed to assign resource role");
-
-		// Charlie has no roles.
-
-		// Act & Assert: Test permission hierarchy.
-		let check = PermissionCheck::builder()
-			.navigator(alice_id)
-			.permission("content_blocks:read:all".to_string())
-			.try_build()
-			.expect("Failed to build permission check");
-
-		// Alice should get global permission.
-		let result = service
-			.check(&check)
-			.await
-			.expect("Failed to check permission");
-		assert_eq!(result, PermissionResult::GrantedGlobal);
-
-		let check = PermissionCheck::builder()
-			.navigator(bob_id)
-			.permission("content_blocks:read:resource".to_string())
-			.resource("content_block".to_string(), resource_id)
-			.try_build()
-			.expect("Failed to build permission check");
-
-		// Bob should get resource permission.
-		let result = service
-			.check(&check)
-			.await
-			.expect("Failed to check permission");
-		assert_eq!(result, PermissionResult::GrantedResource);
-
-		let check = PermissionCheck::builder()
-			.navigator(charlie_id)
-			.permission("content_blocks:read:all".to_string())
-			.try_build()
-			.expect("Failed to build permission check");
-
-		// Charlie should be denied (no permissions).
-		let result = service
-			.check(&check)
-			.await
-			.expect("Failed to check permission");
-		assert_eq!(result, PermissionResult::Denied);
-
-		// Cleanup.
-		cleanup_test_data(&pool, &[alice_id, bob_id, charlie_id]).await;
-	}
-
-	#[tokio::test]
 	async fn test_error_handling() {
 		let pool = connect_to_test_database().await;
 		let repo = AccessRepository::new(pool.clone());
@@ -1020,7 +778,14 @@ mod tests {
 			.expect("Failed to grant global role again");
 
 		// Assert: Should still have the permission.
-		let can_read = AccessExt::can(&service, &alice_id, "content_blocks:read:all")
+		let can_read = service
+			.can(
+				&PermissionCheck::builder()
+					.navigator(alice_id)
+					.permission("content_blocks:read:all".to_string())
+					.try_build()
+					.unwrap(),
+			)
 			.await
 			.expect("Failed to check permission");
 
@@ -1039,7 +804,7 @@ mod tests {
 
 		// Assert: Should still have the permission.
 		let can_read = service
-			.can_on(
+			.can_on_resource(
 				&bob_id,
 				"content_blocks:read:resource",
 				"content_block",

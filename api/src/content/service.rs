@@ -1,4 +1,3 @@
-use crate::access::service::AccessExt;
 use crate::access::service::AccessService;
 use crate::content::repository::ContentRepository;
 use crate::content::repository::ContentRepositoryError;
@@ -185,13 +184,11 @@ impl ContentService {
 			.map_err(ContentServiceError::FetchContentBlock)?;
 
 		// 1. Check if the navigator has global read permission.
-		let can_access_globally = AccessExt::can(
-			&self.access_service,
-			navigator_id,
-			"content_blocks:read:all",
-		)
-		.await
-		.map_err(ContentServiceError::AccessControl)?;
+		let can_access_globally = self
+			.access_service
+			.can_permission(navigator_id, "content_blocks:read:all")
+			.await
+			.map_err(ContentServiceError::AccessControl)?;
 
 		if can_access_globally {
 			return Ok(true);
@@ -200,7 +197,7 @@ impl ContentService {
 		// 2. Check if the navigator has access to the requested block.
 		let can_access_block = self
 			.access_service
-			.can_on(
+			.can_on_resource(
 				navigator_id,
 				"content_blocks:read:resource",
 				"content_block",
@@ -214,13 +211,11 @@ impl ContentService {
 		}
 
 		// 3. Check if the navigator has ownership permission.
-		let can_access_own = AccessExt::can(
-			&self.access_service,
-			navigator_id,
-			"content_blocks:read:own",
-		)
-		.await
-		.map_err(ContentServiceError::AccessControl)?;
+		let can_access_own = self
+			.access_service
+			.can_permission(navigator_id, "content_blocks:read:own")
+			.await
+			.map_err(ContentServiceError::AccessControl)?;
 
 		if can_access_own {
 			// Check if the navigator owns the block.
@@ -248,7 +243,7 @@ impl ContentService {
 		for ancestor in &ancestors {
 			let can_access_ancestor = self
 				.access_service
-				.can_on(
+				.can_on_resource(
 					navigator_id,
 					"content_blocks:read:resource",
 					"content_block",
