@@ -184,7 +184,20 @@ impl ContentService {
 			.await
 			.map_err(ContentServiceError::FetchContentBlock)?;
 
-		// Check if the navigator has access to the requested block itself.
+		// 1. Check if the navigator has global read permission.
+		let can_access_globally = AccessExt::can(
+			&self.access_service,
+			navigator_id,
+			"content_blocks:read:all",
+		)
+		.await
+		.map_err(ContentServiceError::AccessControl)?;
+
+		if can_access_globally {
+			return Ok(true);
+		}
+
+		// 2. Check if the navigator has access to the requested block.
 		let can_access_block = self
 			.access_service
 			.can_on(
@@ -200,44 +213,7 @@ impl ContentService {
 			return Ok(true);
 		}
 
-		// If not, check if they have access to any ancestor blocks.
-		let ancestors = self
-			.repository
-			.get_ancestor_blocks(block_id)
-			.await
-			.map_err(ContentServiceError::FetchAncestorBlocks)?;
-
-		for ancestor in &ancestors {
-			let can_access_ancestor = self
-				.access_service
-				.can_on(
-					navigator_id,
-					"content_blocks:read:resource",
-					"content_block",
-					ancestor.nutty_id(),
-				)
-				.await
-				.map_err(ContentServiceError::AccessControl)?;
-
-			if can_access_ancestor {
-				return Ok(true);
-			}
-		}
-
-		// Also, check global permissions.
-		let can_access_globally = AccessExt::can(
-			&self.access_service,
-			navigator_id,
-			"content_blocks:read:all",
-		)
-		.await
-		.map_err(ContentServiceError::AccessControl)?;
-
-		if can_access_globally {
-			return Ok(true);
-		}
-
-		// Check ownership permissions.
+		// 3. Check if the navigator has ownership permission.
 		let can_access_own = AccessExt::can(
 			&self.access_service,
 			navigator_id,
@@ -259,6 +235,30 @@ impl ContentService {
 				if owner_id == *navigator_id {
 					return Ok(true);
 				}
+			}
+		}
+
+		// 4. Check if the navigator has access to any ancestor blocks.
+		let ancestors = self
+			.repository
+			.get_ancestor_blocks(block_id)
+			.await
+			.map_err(ContentServiceError::FetchAncestorBlocks)?;
+
+		for ancestor in &ancestors {
+			let can_access_ancestor = self
+				.access_service
+				.can_on(
+					navigator_id,
+					"content_blocks:read:resource",
+					"content_block",
+					ancestor.nutty_id(),
+				)
+				.await
+				.map_err(ContentServiceError::AccessControl)?;
+
+			if can_access_ancestor {
+				return Ok(true);
 			}
 		}
 
