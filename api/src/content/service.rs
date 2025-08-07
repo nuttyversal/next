@@ -259,6 +259,96 @@ impl ContentService {
 
 		Ok(false)
 	}
+
+	/// Check if a navigator has write access to a content block or any of its ancestors.
+	pub async fn check_content_block_write_access(
+		&self,
+		navigator_id: &crate::models::NuttyId,
+		block_id: &DissociatedNuttyId,
+	) -> Result<bool, ContentServiceError> {
+		// First, resolve the DissociatedNuttyId to a NuttyId.
+		let resolved_block_id = self
+			.repository
+			.resolve_nutty_id(block_id.clone())
+			.await
+			.map_err(ContentServiceError::FetchContentBlock)?;
+
+		// 1. Check if the navigator has global write permission.
+		let can_write_globally = self
+			.access_service
+			.can_permission(navigator_id, "content_blocks:write:all")
+			.await
+			.map_err(ContentServiceError::AccessControl)?;
+
+		if can_write_globally {
+			return Ok(true);
+		}
+
+		// 2. Check if the navigator has direct write access to the requested block.
+		let can_write_block = self
+			.access_service
+			.can_on_resource(
+				navigator_id,
+				"content_blocks:write",
+				"content_block",
+				&resolved_block_id,
+			)
+			.await
+			.map_err(ContentServiceError::AccessControl)?;
+
+		if can_write_block {
+			return Ok(true);
+		}
+
+		// 3. Check if the navigator has ownership write permission.
+		let can_write_own = self
+			.access_service
+			.can_permission(navigator_id, "content_blocks:write:own")
+			.await
+			.map_err(ContentServiceError::AccessControl)?;
+
+		if can_write_own {
+			// Check if the navigator owns the block.
+			let content_block = self
+				.repository
+				.get_content_block(block_id)
+				.await
+				.map_err(ContentServiceError::FetchContentBlock)?
+				.ok_or(ContentServiceError::ContentBlockNotFound)?;
+
+			if let Some(owner_id) = content_block.owner_id {
+				if owner_id == *navigator_id {
+					return Ok(true);
+				}
+			}
+		}
+
+		// 4. Check if the navigator has write access to any ancestor blocks.
+		let ancestors = self
+			.repository
+			.get_ancestor_blocks(block_id)
+			.await
+			.map_err(ContentServiceError::FetchAncestorBlocks)?;
+
+		for ancestor in &ancestors {
+			let can_write_ancestor = self
+				.access_service
+				.can_on_resource(
+					navigator_id,
+					"content_blocks:write",
+					"content_block",
+					ancestor.nutty_id(),
+				)
+				.await
+				.map_err(ContentServiceError::AccessControl)?;
+
+			if can_write_ancestor {
+				return Ok(true);
+			}
+		}
+
+		Ok(false)
+	}
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -1152,6 +1242,594 @@ mod tests {
 		.expect("Failed to cleanup test navigator");
 	}
 
+	#[tokio::test]
+	async fn test_check_content_block_write_access_global_permission() {
+		// Test that a user with global write permission can write any block.
+		let pool = connect_to_test_database().await;
+		let repo = ContentRepository::new(pool.clone());
+		let access_repo = AccessRepository::new(pool.clone());
+		let access_service = AccessService::new(access_repo);
+		let service = ContentService::new(repo, access_service);
+
+		// Set up test data (permissions, roles, etc.)
+		setup_test_data(&pool).await;
+
+		// Create test navigator in the database
+		let navigator_id = NuttyId::now();
+		let navigator_name = format!("test_navigator_{}", navigator_id.nid());
+
+		// Insert navigator into database
+		sqlx::query!(
+			r#"
+				INSERT INTO auth.navigators (id, nutty_id, name, pass, created_at, updated_at)
+				VALUES ($1, $2, $3, 'test_pass', NOW(), NOW())
+			"#,
+			navigator_id.uuid(),
+			navigator_id.nid(),
+			navigator_name,
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to create test navigator");
+
+		// Create the block in the database
+		let content_block = ContentBlock::now(
+			None,
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Test Page".to_string(),
+			},
+		);
+
+		service
+			.repository
+			.upsert_content_block(content_block.clone())
+			.await
+			.expect("Failed to save test block");
+
+		// Grant global write permission.
+		service
+			.access_service
+			.grant_global_role(&navigator_id, "admin")
+			.await
+			.expect("Failed to grant global role");
+
+		// Test that the navigator can write the block.
+		let block_id_dissociated = DissociatedNuttyId::new(&content_block.nutty_id().nid()).unwrap();
+		let has_access = service
+			.check_content_block_write_access(&navigator_id, &block_id_dissociated)
+			.await
+			.expect("Failed to check write access");
+
+		assert!(
+			has_access,
+			"Navigator should have global write access to the block"
+		);
+
+		// Clean up.
+		service
+			.repository
+			.delete_content_block(&block_id_dissociated)
+			.await
+			.expect("Failed to clean up test block");
+
+		// Clean up navigator.
+		sqlx::query!(
+			r#"DELETE FROM auth.navigators WHERE id = $1"#,
+			navigator_id.uuid()
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to cleanup test navigator");
+	}
+
+	#[tokio::test]
+	async fn test_check_content_block_write_access_direct_access() {
+		// Test that a user with direct write access to a block can write it.
+		let pool = connect_to_test_database().await;
+		let repo = ContentRepository::new(pool.clone());
+		let access_repo = AccessRepository::new(pool.clone());
+		let access_service = AccessService::new(access_repo);
+		let service = ContentService::new(repo, access_service);
+
+		// Set up test data (permissions, roles, etc.)
+		setup_test_data(&pool).await;
+
+		// Create test navigator in the database
+		let navigator_id = NuttyId::now();
+		let navigator_name = format!("test_navigator_{}", navigator_id.nid());
+
+		// Insert navigator into database
+		sqlx::query!(
+			r#"
+				INSERT INTO auth.navigators (id, nutty_id, name, pass, created_at, updated_at)
+				VALUES ($1, $2, $3, 'test_pass', NOW(), NOW())
+			"#,
+			navigator_id.uuid(),
+			navigator_id.nid(),
+			navigator_name,
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to create test navigator");
+
+		// Create the block in the database
+		let content_block = ContentBlock::now(
+			None,
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Test Page".to_string(),
+			},
+		);
+
+		service
+			.repository
+			.upsert_content_block(content_block.clone())
+			.await
+			.expect("Failed to save test block");
+
+		// Grant direct write access to the navigator.
+		service
+			.access_service
+			.grant_resource_role(
+				&navigator_id,
+				"editor",
+				"content_block",
+				content_block.nutty_id(),
+			)
+			.await
+			.expect("Failed to grant resource role");
+
+		// Test that the navigator can write the block.
+		let block_id_dissociated = DissociatedNuttyId::new(&content_block.nutty_id().nid()).unwrap();
+		let has_access = service
+			.check_content_block_write_access(&navigator_id, &block_id_dissociated)
+			.await
+			.expect("Failed to check write access");
+
+		assert!(
+			has_access,
+			"Navigator should have direct write access to the block"
+		);
+
+		// Clean up.
+		service
+			.repository
+			.delete_content_block(&block_id_dissociated)
+			.await
+			.expect("Failed to clean up test block");
+
+		// Clean up navigator.
+		sqlx::query!(
+			r#"DELETE FROM auth.navigators WHERE id = $1"#,
+			navigator_id.uuid()
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to cleanup test navigator");
+	}
+
+	#[tokio::test]
+	async fn test_check_content_block_write_access_ownership() {
+		// Test that a user with ownership write permission can write their own blocks.
+		let pool = connect_to_test_database().await;
+		let repo = ContentRepository::new(pool.clone());
+		let access_repo = AccessRepository::new(pool.clone());
+		let access_service = AccessService::new(access_repo);
+		let service = ContentService::new(repo, access_service);
+
+		// Set up test data (permissions, roles, etc.)
+		setup_test_data(&pool).await;
+
+		// Create test navigator in the database
+		let navigator_id = NuttyId::now();
+		let navigator_name = format!("test_navigator_{}", navigator_id.nid());
+
+		// Insert navigator into database
+		sqlx::query!(
+			r#"
+				INSERT INTO auth.navigators (id, nutty_id, name, pass, created_at, updated_at)
+				VALUES ($1, $2, $3, 'test_pass', NOW(), NOW())
+			"#,
+			navigator_id.uuid(),
+			navigator_id.nid(),
+			navigator_name,
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to create test navigator");
+
+		// Create a block owned by the navigator
+		let content_block = ContentBlock::now_with_owner(
+			None,
+			navigator_id,
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Owned Page".to_string(),
+			},
+		);
+
+		service
+			.repository
+			.upsert_content_block(content_block.clone())
+			.await
+			.expect("Failed to save owned block");
+
+		// Grant ownership write permission.
+		service
+			.access_service
+			.grant_global_role(&navigator_id, "block_owner")
+			.await
+			.expect("Failed to grant ownership role");
+
+		// Test that the navigator can write their own block.
+		let block_id_dissociated = DissociatedNuttyId::new(&content_block.nutty_id().nid()).unwrap();
+		let has_access = service
+			.check_content_block_write_access(&navigator_id, &block_id_dissociated)
+			.await
+			.expect("Failed to check write access");
+
+		assert!(
+			has_access,
+			"Navigator should have write access to their own block"
+		);
+
+		// Clean up.
+		service
+			.repository
+			.delete_content_block(&block_id_dissociated)
+			.await
+			.expect("Failed to clean up owned block");
+
+		// Clean up navigator.
+		sqlx::query!(
+			r#"DELETE FROM auth.navigators WHERE id = $1"#,
+			navigator_id.uuid()
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to cleanup test navigator");
+	}
+
+	#[tokio::test]
+	async fn test_check_content_block_write_access_ancestor_access() {
+		// Test that a user with write access to an ancestor can write descendant blocks.
+		let pool = connect_to_test_database().await;
+		let repo = ContentRepository::new(pool.clone());
+		let access_repo = AccessRepository::new(pool.clone());
+		let access_service = AccessService::new(access_repo);
+		let service = ContentService::new(repo, access_service);
+
+		// Set up test data (permissions, roles, etc.)
+		setup_test_data(&pool).await;
+
+		// Create test navigator in the database
+		let navigator_id = NuttyId::now();
+		let navigator_name = format!("test_navigator_{}", navigator_id.nid());
+
+		// Insert navigator into database
+		sqlx::query!(
+			r#"
+				INSERT INTO auth.navigators (id, nutty_id, name, pass, created_at, updated_at)
+				VALUES ($1, $2, $3, 'test_pass', NOW(), NOW())
+			"#,
+			navigator_id.uuid(),
+			navigator_id.nid(),
+			navigator_name,
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to create test navigator");
+
+		// Create a hierarchy: parent -> child -> grandchild
+		let parent_block = ContentBlock::now(
+			None,
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Parent Page".to_string(),
+			},
+		);
+
+		let child_block = ContentBlock::now(
+			Some(*parent_block.nutty_id()),
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Child Page".to_string(),
+			},
+		);
+
+		let grandchild_block = ContentBlock::now(
+			Some(*child_block.nutty_id()),
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Grandchild Page".to_string(),
+			},
+		);
+
+		// Save all blocks
+		service
+			.repository
+			.upsert_content_block(parent_block.clone())
+			.await
+			.expect("Failed to save parent block");
+
+		service
+			.repository
+			.upsert_content_block(child_block.clone())
+			.await
+			.expect("Failed to save child block");
+
+		service
+			.repository
+			.upsert_content_block(grandchild_block.clone())
+			.await
+			.expect("Failed to save grandchild block");
+
+		// Grant write access to the parent block only.
+		service
+			.access_service
+			.grant_resource_role(
+				&navigator_id,
+				"editor",
+				"content_block",
+				parent_block.nutty_id(),
+			)
+			.await
+			.expect("Failed to grant parent write access");
+
+		// Test that the navigator can write the grandchild through ancestor access.
+		let grandchild_id = DissociatedNuttyId::new(&grandchild_block.nutty_id().nid()).unwrap();
+		let has_access = service
+			.check_content_block_write_access(&navigator_id, &grandchild_id)
+			.await
+			.expect("Failed to check write access");
+
+		assert!(
+			has_access,
+			"Navigator should have write access to grandchild through ancestor"
+		);
+
+		// Clean up.
+		service
+			.repository
+			.delete_content_block(
+				&DissociatedNuttyId::new(&grandchild_block.nutty_id().nid()).unwrap(),
+			)
+			.await
+			.expect("Failed to clean up grandchild");
+		service
+			.repository
+			.delete_content_block(&DissociatedNuttyId::new(&child_block.nutty_id().nid()).unwrap())
+			.await
+			.expect("Failed to clean up child");
+		service
+			.repository
+			.delete_content_block(&DissociatedNuttyId::new(&parent_block.nutty_id().nid()).unwrap())
+			.await
+			.expect("Failed to clean up parent");
+
+		// Clean up navigator.
+		sqlx::query!(
+			r#"DELETE FROM auth.navigators WHERE id = $1"#,
+			navigator_id.uuid()
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to cleanup test navigator");
+	}
+
+	#[tokio::test]
+	async fn test_check_content_block_write_access_no_access() {
+		// Test that a user without any write permissions cannot write blocks.
+		let pool = connect_to_test_database().await;
+		let repo = ContentRepository::new(pool.clone());
+		let access_repo = AccessRepository::new(pool.clone());
+		let access_service = AccessService::new(access_repo);
+		let service = ContentService::new(repo, access_service);
+
+		// Set up test data (permissions, roles, etc.)
+		setup_test_data(&pool).await;
+
+		// Create test navigator in the database
+		let navigator_id = NuttyId::now();
+		let navigator_name = format!("test_navigator_{}", navigator_id.nid());
+
+		// Insert navigator into database
+		sqlx::query!(
+			r#"
+				INSERT INTO auth.navigators (id, nutty_id, name, pass, created_at, updated_at)
+				VALUES ($1, $2, $3, 'test_pass', NOW(), NOW())
+			"#,
+			navigator_id.uuid(),
+			navigator_id.nid(),
+			navigator_name,
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to create test navigator");
+
+		// Create the block in the database
+		let content_block = ContentBlock::now(
+			None,
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Test Page".to_string(),
+			},
+		);
+
+		service
+			.repository
+			.upsert_content_block(content_block.clone())
+			.await
+			.expect("Failed to save test block");
+
+		// Test that the navigator cannot write the block (no permissions granted).
+		let block_id_dissociated = DissociatedNuttyId::new(&content_block.nutty_id().nid()).unwrap();
+		let has_access = service
+			.check_content_block_write_access(&navigator_id, &block_id_dissociated)
+			.await
+			.expect("Failed to check write access");
+
+		assert!(
+			!has_access,
+			"Navigator should not have write access without permissions"
+		);
+
+		// Clean up.
+		service
+			.repository
+			.delete_content_block(&block_id_dissociated)
+			.await
+			.expect("Failed to clean up test block");
+
+		// Clean up navigator.
+		sqlx::query!(
+			r#"DELETE FROM auth.navigators WHERE id = $1"#,
+			navigator_id.uuid()
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to cleanup test navigator");
+	}
+
+	#[tokio::test]
+	async fn test_check_content_block_write_access_ownership_without_permission() {
+		// Test that a user who owns a block but doesn't have ownership permission cannot write it.
+		let pool = connect_to_test_database().await;
+		let repo = ContentRepository::new(pool.clone());
+		let access_repo = AccessRepository::new(pool.clone());
+		let access_service = AccessService::new(access_repo);
+		let service = ContentService::new(repo, access_service);
+
+		// Set up test data (permissions, roles, etc.)
+		setup_test_data(&pool).await;
+
+		// Create test navigator in the database
+		let navigator_id = NuttyId::now();
+		let navigator_name = format!("test_navigator_{}", navigator_id.nid());
+
+		// Insert navigator into database
+		sqlx::query!(
+			r#"
+				INSERT INTO auth.navigators (id, nutty_id, name, pass, created_at, updated_at)
+				VALUES ($1, $2, $3, 'test_pass', NOW(), NOW())
+			"#,
+			navigator_id.uuid(),
+			navigator_id.nid(),
+			navigator_name,
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to create test navigator");
+
+		// Create a block owned by the navigator
+		let content_block = ContentBlock::now_with_owner(
+			None,
+			navigator_id,
+			FractionalIndex::start(),
+			BlockContent::Page {
+				title: "Owned Page".to_string(),
+			},
+		);
+
+		service
+			.repository
+			.upsert_content_block(content_block.clone())
+			.await
+			.expect("Failed to save owned block");
+
+		// Don't grant any ownership permissions.
+
+		// Test that the navigator cannot write their own block without ownership permission.
+		let block_id_dissociated = DissociatedNuttyId::new(&content_block.nutty_id().nid()).unwrap();
+		let has_access = service
+			.check_content_block_write_access(&navigator_id, &block_id_dissociated)
+			.await
+			.expect("Failed to check write access");
+
+		assert!(
+			!has_access,
+			"Navigator should not have write access without ownership permission"
+		);
+
+		// Clean up.
+		service
+			.repository
+			.delete_content_block(&block_id_dissociated)
+			.await
+			.expect("Failed to clean up owned block");
+
+		// Clean up navigator.
+		sqlx::query!(
+			r#"DELETE FROM auth.navigators WHERE id = $1"#,
+			navigator_id.uuid()
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to cleanup test navigator");
+	}
+
+	#[tokio::test]
+	async fn test_check_content_block_write_access_nonexistent_block() {
+		// Test that checking write access for a non-existent block returns an error.
+		let pool = connect_to_test_database().await;
+		let repo = ContentRepository::new(pool.clone());
+		let access_repo = AccessRepository::new(pool.clone());
+		let access_service = AccessService::new(access_repo);
+		let service = ContentService::new(repo, access_service);
+
+		// Set up test data (permissions, roles, etc.)
+		setup_test_data(&pool).await;
+
+		// Create test navigator in the database
+		let navigator_id = NuttyId::now();
+		let navigator_name = format!("test_navigator_{}", navigator_id.nid());
+
+		// Insert navigator into database
+		sqlx::query!(
+			r#"
+				INSERT INTO auth.navigators (id, nutty_id, name, pass, created_at, updated_at)
+				VALUES ($1, $2, $3, 'test_pass', NOW(), NOW())
+			"#,
+			navigator_id.uuid(),
+			navigator_id.nid(),
+			navigator_name,
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to create test navigator");
+
+		// Create a valid but non-existent block ID
+		let nonexistent_block_id = DissociatedNuttyId::new("abcdefg").unwrap();
+
+		// Test that checking write access for a non-existent block returns an error.
+		let result = service
+			.check_content_block_write_access(&navigator_id, &nonexistent_block_id)
+			.await;
+
+		assert!(
+			result.is_err(),
+			"Should return error for non-existent block"
+		);
+		match result {
+			Err(ContentServiceError::FetchContentBlock(_)) => {
+				// Expected error
+			}
+			_ => {
+				panic!("Expected FetchContentBlock error for non-existent block");
+			}
+		}
+
+		// Clean up navigator.
+		sqlx::query!(
+			r#"DELETE FROM auth.navigators WHERE id = $1"#,
+			navigator_id.uuid()
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to clean up test navigator");
+	}
+
 	// Helper function to set up test data.
 	async fn setup_test_data(pool: &sqlx::PgPool) {
 		// Insert test permissions.
@@ -1163,7 +1841,8 @@ mod tests {
 					('content_blocks:write:all', 'Write all content blocks'),
 					('content_blocks:write:own', 'Write own content blocks'),
 					('content_blocks:read:resource', 'Read specific content block'),
-					('content_blocks:read:own', 'Read own content blocks')
+					('content_blocks:read:own', 'Read own content blocks'),
+					('content_blocks:write', 'Write specific content block')
 				ON CONFLICT (name) DO NOTHING
 			"#
 		)
@@ -1195,6 +1874,7 @@ mod tests {
 					('admin', 'content_blocks:read:all'),
 					('admin', 'content_blocks:write:all'),
 					('editor', 'content_blocks:read:all'),
+					('editor', 'content_blocks:write'),
 					('viewer', 'content_blocks:read:resource'),
 					('block_owner', 'content_blocks:read:own'),
 					('block_owner', 'content_blocks:write:own')

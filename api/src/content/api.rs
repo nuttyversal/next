@@ -125,6 +125,7 @@ async fn content_context_handler(
 /// An API handler for upserting a [ContentBlock].
 async fn content_block_handler(
 	State(state): State<Arc<AppState>>,
+	Session { navigator, .. }: Session,
 	Path(block_id): Path<String>,
 	Json(payload): Json<ContentBlock>,
 ) -> (StatusCode, Json<Response<ContentBlock>>) {
@@ -162,18 +163,57 @@ async fn content_block_handler(
 		);
 	}
 
-	// Save the content block.
-	match state.content_service.save_content_block(payload).await {
-		Ok(content_block) => (
-			StatusCode::OK,
-			Json(Response::Single {
-				data: Some(content_block),
-			}),
-		),
+	// Check if the navigator has write access to this content block.
+	let has_access = state
+		.content_service
+		.check_content_block_write_access(navigator.nutty_id(), &block_id)
+		.await;
+
+	match has_access {
+		Ok(true) => {
+			// User has write access to this content block.
+			// We can proceed with saving the block.
+			match state.content_service.save_content_block(payload).await {
+				Ok(content_block) => (
+					StatusCode::OK,
+					Json(Response::Single {
+						data: Some(content_block),
+					}),
+				),
+
+				Err(error) => {
+					let summary = "Failed to save content block.";
+					let error = ContentApiError::QueryBlockContext(error);
+					let error = Error::from_error(&error).with_summary(summary);
+
+					(
+						StatusCode::INTERNAL_SERVER_ERROR,
+						Json(Response::Error {
+							errors: vec![error],
+						}),
+					)
+				}
+			}
+		}
+
+		Ok(false) => {
+			// User does not have write access to this content block.
+			let summary = "Access denied.";
+			let error = ContentApiError::AccessDenied;
+			let error = Error::from_error(&error).with_summary(summary);
+
+			(
+				StatusCode::FORBIDDEN,
+				Json(Response::Error {
+					errors: vec![error],
+				}),
+			)
+		}
 
 		Err(error) => {
-			let summary = "Failed to save content block.";
-			let error = ContentApiError::QueryBlockContext(error);
+			// Error occurred while checking access.
+			let summary = "Failed to check access permissions.";
+			let error = ContentApiError::AccessControl(error);
 			let error = Error::from_error(&error).with_summary(summary);
 
 			(
