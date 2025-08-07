@@ -164,6 +164,8 @@ mod tests {
 	use sqlx::postgres::PgPoolOptions;
 
 	use super::*;
+	use crate::access::repository::AccessRepository;
+	use crate::access::service::AccessService;
 	use crate::content::repository::ContentRepository;
 	use crate::content::service::ContentService;
 	use crate::navigator::repository::NavigatorRepository;
@@ -186,12 +188,15 @@ mod tests {
 		let pool = connect_to_test_database().await;
 		let navigator_repository = NavigatorRepository::new(pool.clone());
 		let content_repository = ContentRepository::new(pool.clone());
+		let access_repository = AccessRepository::new(pool.clone());
+		let access_service = AccessService::new(access_repository);
 		let navigator_service = NavigatorService::new(navigator_repository.clone());
-		let content_service = ContentService::new(content_repository.clone());
+		let content_service = ContentService::new(content_repository.clone(), access_service.clone());
 
 		let state = Arc::new(AppState {
 			navigator_service,
 			content_service,
+			access_service,
 		});
 
 		// Create a test navigator.
@@ -254,12 +259,15 @@ mod tests {
 		let pool = connect_to_test_database().await;
 		let navigator_repository = NavigatorRepository::new(pool.clone());
 		let content_repository = ContentRepository::new(pool.clone());
+		let access_repository = AccessRepository::new(pool.clone());
+		let access_service = AccessService::new(access_repository);
 		let navigator_service = NavigatorService::new(navigator_repository.clone());
-		let content_service = ContentService::new(content_repository.clone());
+		let content_service = ContentService::new(content_repository.clone(), access_service.clone());
 
 		let state = Arc::new(AppState {
 			navigator_service,
 			content_service,
+			access_service,
 		});
 
 		// Create a test navigator.

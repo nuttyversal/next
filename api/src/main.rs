@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::routing::get;
+use nuttyverse_core::access::repository::AccessRepository;
+use nuttyverse_core::access::service::AccessService;
 use nuttyverse_core::content::api::router as content_router;
 use nuttyverse_core::content::repository::ContentRepository;
 use nuttyverse_core::content::service::ContentService;
@@ -29,11 +31,14 @@ async fn main() {
 
 	// Set up application state.
 	let content_repository = ContentRepository::new(database_pool.clone());
-	let content_service = ContentService::new(content_repository);
+	let access_repository = AccessRepository::new(database_pool.clone());
+	let access_service = AccessService::new(access_repository);
+	let content_service = ContentService::new(content_repository, access_service.clone());
 	let navigator_repository = NavigatorRepository::new(database_pool.clone());
 	let navigator_service = NavigatorService::new(navigator_repository);
 
 	let app_state = Arc::new(AppState {
+		access_service,
 		content_service,
 		navigator_service,
 	});

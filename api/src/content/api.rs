@@ -15,6 +15,7 @@ use crate::models::DissociatedNuttyId;
 use crate::models::nutty_id::NuttyIdError;
 use crate::utilities::api::response::Error;
 use crate::utilities::api::response::Response;
+use crate::utilities::api::session::Session;
 use crate::utilities::api::state::AppState;
 
 /// The router for content API endpoints.
@@ -31,6 +32,7 @@ pub fn router(app_state: Arc<AppState>) -> Router {
 /// An API handler for fetching the [BlockContext] for a given [ContentBlock].
 async fn content_context_handler(
 	State(state): State<Arc<AppState>>,
+	Session { navigator, .. }: Session,
 	Path(block_id): Path<String>,
 ) -> (StatusCode, Json<Response<ContentContext>>) {
 	let block_id = DissociatedNuttyId::new(&block_id);
@@ -52,22 +54,62 @@ async fn content_context_handler(
 		}
 	};
 
-	let block_context = state
+	// Check if the navigator has access to this content block.
+	let has_access = state
 		.content_service
-		.get_content_block_context(&block_id)
+		.check_content_block_access(navigator.nutty_id(), &block_id)
 		.await;
 
-	match block_context {
-		Ok(block_context) => (
-			StatusCode::OK,
-			Json(Response::Single {
-				data: Some(block_context),
-			}),
-		),
+	match has_access {
+		Ok(true) => {
+			// User has access to this content block.
+			// We can proceed with fetching the rest of the context.
+			let block_context = state
+				.content_service
+				.get_content_block_context(&block_id)
+				.await;
+
+			match block_context {
+				Ok(block_context) => (
+					StatusCode::OK,
+					Json(Response::Single {
+						data: Some(block_context),
+					}),
+				),
+
+				Err(error) => {
+					let summary = "Failed to query block context.";
+					let error = ContentApiError::QueryBlockContext(error);
+					let error = Error::from_error(&error).with_summary(summary);
+
+					(
+						StatusCode::INTERNAL_SERVER_ERROR,
+						Json(Response::Error {
+							errors: vec![error],
+						}),
+					)
+				}
+			}
+		}
+
+		Ok(false) => {
+			// User does not have access to this content block.
+			let summary = "Access denied.";
+			let error = ContentApiError::AccessDenied;
+			let error = Error::from_error(&error).with_summary(summary);
+
+			(
+				StatusCode::FORBIDDEN,
+				Json(Response::Error {
+					errors: vec![error],
+				}),
+			)
+		}
 
 		Err(error) => {
-			let summary = "Failed to query block context.";
-			let error = ContentApiError::QueryBlockContext(error);
+			// Error occurred while checking access.
+			let summary = "Failed to check access permissions.";
+			let error = ContentApiError::AccessControl(error);
 			let error = Error::from_error(&error).with_summary(summary);
 
 			(
@@ -154,4 +196,10 @@ pub enum ContentApiError {
 
 	#[error("Block ID mismatch: {0}")]
 	BlockIdMismatch(String),
+
+	#[error("Access denied.")]
+	AccessDenied,
+
+	#[error("Failed to check access permissions: {0}")]
+	AccessControl(ContentServiceError),
 }
